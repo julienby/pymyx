@@ -114,7 +114,9 @@ def cmd_status(_args, _parser):
     from datetime import datetime
     from pathlib import Path
     from pymyx.core.flow import FLOWS_ROOT
-    from pymyx.core.pipeline import DATASETS_PREFIX, resolve_paths
+    from pymyx.core.pipeline import DATASETS_PREFIX, PIPELINE_STEPS, resolve_paths
+
+    external = {s["treatment"] for s in PIPELINE_STEPS if s.get("external")}
 
     flows = sorted(FLOWS_ROOT.glob("*.json"))
     if not flows:
@@ -156,7 +158,7 @@ def cmd_status(_args, _parser):
                 n_files = 0
                 last_date = "-"
 
-            if n_files == 0:
+            if n_files == 0 and treatment not in external:
                 all_ok = False
 
             print(f"  {treatment:<14s} {out_name:<18s} {n_files:>4d} files   last: {last_date}")
