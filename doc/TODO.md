@@ -95,3 +95,22 @@ ou TEST_<experience>_ABC
 - il faut optimiser les index pour avoir un requetage rapide (timestamp / device_id / sensor)
 
 l'insertion dans la base pourra venir après un step 60_ 70_ ou 80_  plus tard
+
+## Export ✅ DONE
+
+61_EXPORTNOUR : export CSV depuis aggregated, un fichier par device.
+
+Format cible : tab-separated, colonne Time en Europe/Paris (YYYY-MM-DD HH:MM:SS), colonnes déclaratives avec mapping source → nom exporté.
+
+Fichier : `<experience>_<device_id>_aggregated_<aggregation>_<from>_<to>.csv`
+
+Implémenté :
+- choix des colonnes et renommage déclaratif via `columns` dict
+- conversion timezone UTC → Europe/Paris
+- filtrage optionnel par `from` / `to` (dates YYYY-MM-DD)
+- agrégation 10s mean par défaut
+- un fichier CSV par device
+- traitement : `pymyx/treatments/exportnour/`
+- tests : `tests/test_exportnour.py`
+
+Fix associé : le resample démarre maintenant la grille au premier point de donnée valide (plus de lignes vides en début de journée quand le capteur n'envoie pas encore de bio_signal).
