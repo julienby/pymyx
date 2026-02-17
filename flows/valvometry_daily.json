@@ -2,7 +2,7 @@
     "name": "valvometry_daily",
     "description": "Full daily pipeline: parse -> clean -> transform -> resample -> aggregate",
     "dataset": "PREMANIP-GRACE",
-    "from": "2025-02-03T09:55:00Z",
+    "from": "2026-02-03T09:55:00Z",
     "steps": [
         {"treatment": "parse"},
         {"treatment": "clean"},

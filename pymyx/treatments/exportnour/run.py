@@ -45,9 +45,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     total_files = sum(len(v) for v in by_device.values())
     print(f"  [exportnour] Found {total_files} files, {len(by_device)} devices (domain={domain}, agg={aggregation})")
 
-    from_str = date_from or "start"
-    to_str = date_to or "end"
-
     for device_id, files in sorted(by_device.items()):
         frames = []
         for pf in files:
@@ -85,9 +82,11 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         output_cols = ["Time"] + list(columns.values())
         result = result[output_cols]
 
-        # Build output filename: <experience>_<device_id>_<step>_<aggregation>_<from>_<to>.csv
-        filename = f"{experience}_{device_id}_aggregated_{aggregation}_{from_str}_{to_str}.csv"
+        # Build output filename with actual date range from data
+        first_date = result["Time"].iloc[0][:10]
+        last_date = result["Time"].iloc[-1][:10]
+        filename = f"{experience}_{device_id}_aggregated_{aggregation}_{first_date}_{last_date}.csv"
         out_file = out_path / filename
 
-        result.to_csv(out_file, sep="\t", index=False)
+        result.to_csv(out_file, sep=";", index=False)
         print(f"  [exportnour] {device_id}: {len(result)} rows -> {out_file.name}")

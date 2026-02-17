@@ -79,6 +79,19 @@ def run_flow(
     # Filter steps
     steps = _filter_steps(steps, from_step=from_step, to_step=to_step, step=step)
 
+    # full-replace: wipe all output directories before running
+    if output_mode == "full-replace":
+        for s in steps:
+            out = Path(s["output"])
+            if out.exists():
+                count = sum(1 for f in out.rglob("*") if f.is_file())
+                if count:
+                    for f in out.rglob("*"):
+                        if f.is_file():
+                            f.unlink()
+                    print(f"[flow] Cleared {s['output']} ({count} files)")
+        output_mode = "replace"
+
     # Resolve --last from the first step (parse input/output)
     if last:
         first = steps[0]
@@ -118,7 +131,7 @@ def main():
                         help="Start of time window (ISO 8601)")
     parser.add_argument("--to", dest="time_to", default=None,
                         help="End of time window (ISO 8601)")
-    parser.add_argument("--output-mode", default="append", choices=["replace", "append"],
+    parser.add_argument("--output-mode", default="append", choices=["append", "replace", "full-replace"],
                         help="Output mode: replace or append (default: append)")
     parser.add_argument("--last", action="store_true",
                         help="Incremental: process only the delta since last output")

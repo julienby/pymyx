@@ -11,7 +11,7 @@ def _add_common_args(parser):
                         help="Start of time window (ISO 8601)")
     parser.add_argument("--to", dest="time_to", default=None,
                         help="End of time window (ISO 8601)")
-    parser.add_argument("--output-mode", default="append", choices=["replace", "append"],
+    parser.add_argument("--output-mode", default="append", choices=["append", "replace", "full-replace"],
                         help="Output mode: replace or append (default: append)")
     parser.add_argument("--last", action="store_true",
                         help="Incremental: process only the delta since last output")

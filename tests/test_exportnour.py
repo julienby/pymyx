@@ -64,7 +64,7 @@ class TestOneFilePerDevice:
         run(str(sample_data / "input"), str(out), _params())
 
         for csv in out.glob("*.csv"):
-            df = pd.read_csv(csv, sep="\t")
+            df = pd.read_csv(csv, sep=";")
             assert len(df) == 10  # 6 + 4 rows per device
 
 
@@ -73,7 +73,7 @@ class TestBasicExport:
         out = sample_data / "output"
         run(str(sample_data / "input"), str(out), _params())
 
-        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep="\t")
+        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep=";")
         assert list(df.columns) == ["Time", "c0", "c1"]
 
     def test_column_order_matches_declaration(self, sample_data):
@@ -82,7 +82,7 @@ class TestBasicExport:
             columns={"m2__raw__mean": "z", "m0__raw__mean": "a"},
         ))
 
-        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep="\t")
+        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep=";")
         assert list(df.columns) == ["Time", "z", "a"]
 
 
@@ -91,7 +91,7 @@ class TestTimeFormat:
         out = sample_data / "output"
         run(str(sample_data / "input"), str(out), _params())
 
-        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep="\t")
+        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep=";")
         # 2026-01-20 09:00:00 UTC = 2026-01-20 10:00:00 Paris (CET = UTC+1)
         assert df["Time"].iloc[0] == "2026-01-20 10:00:00"
 
@@ -99,7 +99,7 @@ class TestTimeFormat:
         out = sample_data / "output"
         run(str(sample_data / "input"), str(out), _params())
 
-        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep="\t")
+        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep=";")
         for t in df["Time"]:
             pd.Timestamp(t)
             assert len(t) == 19  # "YYYY-MM-DD HH:MM:SS"
@@ -110,7 +110,7 @@ class TestFromTo:
         out = sample_data / "output"
         run(str(sample_data / "input"), str(out), _params(**{"from": "2026-01-21"}))
 
-        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep="\t")
+        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep=";")
         assert len(df) == 4
         assert all(t.startswith("2026-01-21") for t in df["Time"])
 
@@ -118,14 +118,14 @@ class TestFromTo:
         out = sample_data / "output"
         run(str(sample_data / "input"), str(out), _params(to="2026-01-20"))
 
-        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep="\t")
+        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep=";")
         assert len(df) == 6
 
     def test_from_and_to(self, sample_data):
         out = sample_data / "output"
         run(str(sample_data / "input"), str(out), _params(**{"from": "2026-01-20"}, to="2026-01-20"))
 
-        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep="\t")
+        df = pd.read_csv(sorted(out.glob("*.csv"))[0], sep=";")
         assert len(df) == 6
 
 
@@ -135,6 +135,7 @@ class TestFilename:
         run(str(sample_data / "input"), str(out), _params(**{"from": "2026-01-20"}, to="2026-01-21"))
 
         csvs = sorted(out.glob("*.csv"))
+        # Dates come from actual data (Paris tz: UTC+1)
         assert csvs[0].name == "TEST-EXP_pil-90_aggregated_10s_2026-01-20_2026-01-21.csv"
         assert csvs[1].name == "TEST-EXP_pil-98_aggregated_10s_2026-01-20_2026-01-21.csv"
 
@@ -143,7 +144,8 @@ class TestFilename:
         run(str(sample_data / "input"), str(out), _params())
 
         csvs = sorted(out.glob("*.csv"))
-        assert csvs[0].name == "TEST-EXP_pil-90_aggregated_10s_start_end.csv"
+        # Dates come from actual data range (Paris tz: UTC+1)
+        assert csvs[0].name == "TEST-EXP_pil-90_aggregated_10s_2026-01-20_2026-01-21.csv"
 
 
 class TestErrors:
