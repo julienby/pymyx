@@ -53,16 +53,15 @@ def filter_files_by_date_range(
 
 
 def compute_last_timestamp(directory: Path) -> datetime | None:
-    """Return the max timestamp found across all parquet files in *directory*.
+    """Return the max timestamp found across all files in *directory*.
 
-    Looks for any datetime column (first one found) and returns the global max.
-    Returns None if the directory is empty or contains no timestamp columns.
+    For parquet files: reads the actual timestamp column.
+    For other files (CSV, etc.): falls back to the date embedded in the filename.
+    Returns None if the directory is empty or contains no timestamps.
     """
     parquets = sorted(directory.rglob("*.parquet"))
-    if not parquets:
-        return None
-
     last_ts: datetime | None = None
+
     for p in parquets:
         table = pq.read_table(p)
         for col_name in table.column_names:
@@ -74,7 +73,36 @@ def compute_last_timestamp(directory: Path) -> datetime | None:
                 ts_max = series.max()
                 if last_ts is None or ts_max > last_ts:
                     last_ts = ts_max
-    return last_ts
+
+    if last_ts is not None:
+        return last_ts
+
+    # Fallback: extract date from any file name (CSV, etc.)
+    all_files = sorted(directory.rglob("*"))
+    last_date: date | None = None
+    for f in all_files:
+        if not f.is_file():
+            continue
+        d = extract_date_from_filename(f.name)
+        if d is not None and (last_date is None or d > last_date):
+            last_date = d
+
+    if last_date is not None:
+        return datetime(last_date.year, last_date.month, last_date.day,
+                        23, 59, 59, tzinfo=timezone.utc)
+    return None
+
+
+def _last_file_date(directory: Path) -> date | None:
+    """Return the max date found in filenames across all files in directory."""
+    last: date | None = None
+    for f in directory.rglob("*"):
+        if not f.is_file():
+            continue
+        d = extract_date_from_filename(f.name)
+        if d is not None and (last is None or d > last):
+            last = d
+    return last
 
 
 def resolve_last_range(
@@ -95,6 +123,15 @@ def resolve_last_range(
     if last_output is None:
         # First run — process everything
         return None, None
+
+    # When input has no parquet (CSV only), compare by file dates to avoid
+    # false deltas from the 23:59:59 fallback
+    has_parquet_input = any(input_dir.rglob("*.parquet"))
+    if not has_parquet_input:
+        input_date = _last_file_date(input_dir)
+        output_date = _last_file_date(output_dir)
+        if input_date and output_date and output_date >= input_date:
+            raise ValueError("already up-to-date")
 
     if last_output >= last_input:
         raise ValueError("already up-to-date")

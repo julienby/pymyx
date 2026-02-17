@@ -3,11 +3,40 @@ import json
 import sys
 from pathlib import Path
 
+from pymyx.core.pipeline import resolve_paths
 from pymyx.core.runner import run_treatment
 from pymyx.core.timefilter import parse_iso_utc, resolve_last_range
 
 
 FLOWS_ROOT = Path(__file__).resolve().parent.parent.parent / "flows"
+
+
+def _filter_steps(steps, from_step=None, to_step=None, step=None):
+    """Filter steps by --from-step, --to-step, or --step.
+
+    Returns the filtered list of steps.
+    """
+    names = [s["treatment"] for s in steps]
+
+    if step:
+        if step not in names:
+            raise ValueError(f"Step '{step}' not found in flow. Available: {names}")
+        return [s for s in steps if s["treatment"] == step]
+
+    start = 0
+    end = len(steps)
+
+    if from_step:
+        if from_step not in names:
+            raise ValueError(f"Step '{from_step}' not found in flow. Available: {names}")
+        start = names.index(from_step)
+
+    if to_step:
+        if to_step not in names:
+            raise ValueError(f"Step '{to_step}' not found in flow. Available: {names}")
+        end = names.index(to_step) + 1
+
+    return steps[start:end]
 
 
 def run_flow(
@@ -16,6 +45,9 @@ def run_flow(
     time_to=None,
     output_mode: str = "append",
     last: bool = False,
+    from_step: str | None = None,
+    to_step: str | None = None,
+    step: str | None = None,
 ) -> None:
     flow_path = FLOWS_ROOT / f"{name}.json"
     if not flow_path.exists():
@@ -24,9 +56,21 @@ def run_flow(
     with open(flow_path) as f:
         flow = json.load(f)
 
+    dataset = flow.get("dataset")
     steps = flow.get("steps", [])
     if not steps:
         raise ValueError(f"Flow '{name}' has no steps")
+
+    # Resolve paths from pipeline registry when dataset is present
+    if dataset:
+        for s in steps:
+            if "input" not in s or "output" not in s:
+                inp, out = resolve_paths(dataset, s["treatment"])
+                s.setdefault("input", inp)
+                s.setdefault("output", out)
+
+    # Filter steps
+    steps = _filter_steps(steps, from_step=from_step, to_step=to_step, step=step)
 
     # Resolve --last from the first step (parse input/output)
     if last:
@@ -42,11 +86,11 @@ def run_flow(
             print(f"[flow] --last resolved to {time_from.isoformat()} .. {time_to.isoformat()}")
 
     print(f"[flow] Starting '{name}' ({len(steps)} steps)")
-    for i, step in enumerate(steps, 1):
-        treatment = step["treatment"]
-        input_dir = step["input"]
-        output_dir = step["output"]
-        params = step.get("params", {})
+    for i, s in enumerate(steps, 1):
+        treatment = s["treatment"]
+        input_dir = s["input"]
+        output_dir = s["output"]
+        params = s.get("params", {})
 
         print(f"[flow] Step {i}/{len(steps)}: {treatment}")
         try:
@@ -71,11 +115,19 @@ def main():
                         help="Output mode: replace or append (default: append)")
     parser.add_argument("--last", action="store_true",
                         help="Incremental: process only the delta since last output")
+    parser.add_argument("--from-step", default=None,
+                        help="Start from this treatment step (inclusive)")
+    parser.add_argument("--to-step", default=None,
+                        help="Stop at this treatment step (inclusive)")
+    parser.add_argument("--step", default=None,
+                        help="Run a single step from the flow")
     args = parser.parse_args()
 
     # Validate mutual exclusion
     if args.last and (args.time_from or args.time_to):
         parser.error("--last is mutually exclusive with --from/--to")
+    if args.step and (args.from_step or args.to_step):
+        parser.error("--step is mutually exclusive with --from-step/--to-step")
 
     time_from = parse_iso_utc(args.time_from) if args.time_from else None
     time_to = parse_iso_utc(args.time_to) if args.time_to else None
@@ -85,7 +137,8 @@ def main():
         parser.error("--from must be before --to")
 
     run_flow(args.flow, time_from=time_from, time_to=time_to,
-             output_mode=args.output_mode, last=args.last)
+             output_mode=args.output_mode, last=args.last,
+             from_step=args.from_step, to_step=args.to_step, step=args.step)
 
 
 if __name__ == "__main__":

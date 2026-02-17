@@ -1,36 +1,15 @@
 {
     "name": "valvometry_daily",
     "description": "Full daily pipeline: parse -> clean -> transform -> resample -> aggregate",
+    "dataset": "PREMANIP-GRACE",
     "steps": [
-        {
-            "treatment": "parse",
-            "input": "datasets/PREMANIP-GRACE/00_raw",
-            "output": "datasets/PREMANIP-GRACE/10_parsed"
-        },
-        {
-            "treatment": "clean",
-            "input": "datasets/PREMANIP-GRACE/10_parsed",
-            "output": "datasets/PREMANIP-GRACE/20_clean"
-        },
-        {
-            "treatment": "transform",
-            "input": "datasets/PREMANIP-GRACE/20_clean",
-            "output": "datasets/PREMANIP-GRACE/25_transform"
-        },
-        {
-            "treatment": "resample",
-            "input": "datasets/PREMANIP-GRACE/25_transform",
-            "output": "datasets/PREMANIP-GRACE/30_resampled"
-        },
-        {
-            "treatment": "aggregate",
-            "input": "datasets/PREMANIP-GRACE/30_resampled",
-            "output": "datasets/PREMANIP-GRACE/40_aggregated"
-        },
+        {"treatment": "parse"},
+        {"treatment": "clean"},
+        {"treatment": "transform"},
+        {"treatment": "resample"},
+        {"treatment": "aggregate"},
         {
             "treatment": "to_postgres",
-            "input": "datasets/PREMANIP-GRACE/40_aggregated",
-            "output": "datasets/PREMANIP-GRACE/60_postgres",
             "params": {
                 "host": "pil-86",
                 "dbname": "icaging",
@@ -42,8 +21,6 @@
         },
         {
             "treatment": "exportnour",
-            "input": "datasets/PREMANIP-GRACE/40_aggregated",
-            "output": "datasets/PREMANIP-GRACE/61_exportnour",
             "params": {
                 "aggregation": "10s",
                 "domain": "bio_signal",

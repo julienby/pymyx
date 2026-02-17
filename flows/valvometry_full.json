@@ -1,39 +1,20 @@
 {
     "name": "valvometry_full",
     "description": "Full reprocess pipeline with unlimited gap-fill (no holes in data)",
+    "dataset": "PREMANIP-GRACE",
     "steps": [
-        {
-            "treatment": "parse",
-            "input": "datasets/PREMANIP-GRACE/00_raw",
-            "output": "datasets/PREMANIP-GRACE/10_parsed"
-        },
-        {
-            "treatment": "clean",
-            "input": "datasets/PREMANIP-GRACE/10_parsed",
-            "output": "datasets/PREMANIP-GRACE/20_clean"
-        },
-        {
-            "treatment": "transform",
-            "input": "datasets/PREMANIP-GRACE/20_clean",
-            "output": "datasets/PREMANIP-GRACE/25_transform"
-        },
+        {"treatment": "parse"},
+        {"treatment": "clean"},
+        {"treatment": "transform"},
         {
             "treatment": "resample",
-            "input": "datasets/PREMANIP-GRACE/25_transform",
-            "output": "datasets/PREMANIP-GRACE/30_resampled",
             "params": {
                 "max_gap_fill_s": 86400
             }
         },
-        {
-            "treatment": "aggregate",
-            "input": "datasets/PREMANIP-GRACE/30_resampled",
-            "output": "datasets/PREMANIP-GRACE/40_aggregated"
-        },
+        {"treatment": "aggregate"},
         {
             "treatment": "to_postgres",
-            "input": "datasets/PREMANIP-GRACE/40_aggregated",
-            "output": "datasets/PREMANIP-GRACE/60_postgres",
             "params": {
                 "host": "pil-86",
                 "dbname": "icaging",
