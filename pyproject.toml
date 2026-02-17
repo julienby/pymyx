@@ -1,0 +1,25 @@
+[project]
+name = "pymyx"
+version = "0.1.0"
+description = "Minimal IoT time-series data processing pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "pydantic>=2.0",
+    "jsonlines>=4.0",
+    "psycopg2-binary>=2.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.4"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["pymyx*"]
+
+[tool.ruff]
+line-length = 100

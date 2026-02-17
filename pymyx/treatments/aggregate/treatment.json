@@ -1,0 +1,14 @@
+{
+    "name": "aggregate",
+    "description": "Compute rolling aggregates over multiple configurable time windows",
+    "params": {
+        "windows": {
+            "type": "list",
+            "default": ["10s", "60s", "5min", "1h"]
+        },
+        "metrics": {
+            "type": "list",
+            "default": ["mean", "std"]
+        }
+    }
+}

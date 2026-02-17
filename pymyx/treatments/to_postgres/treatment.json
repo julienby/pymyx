@@ -1,0 +1,22 @@
+{
+    "name": "to_postgres",
+    "description": "Export parquet data to PostgreSQL wide tables",
+    "params": {
+        "host": {"type": "str", "default": "localhost"},
+        "port": {"type": "int", "default": 5432},
+        "dbname": {"type": "str", "default": ""},
+        "user": {"type": "str", "default": ""},
+        "password": {"type": "str", "default": ""},
+        "table_prefix": {"type": "str", "default": ""},
+        "table_template": {"type": "str", "default": "{experience}__{step}__{aggregation}"},
+        "mode": {"type": "str", "default": "append"},
+        "aggregations": {"type": "list", "default": []},
+        "sources": {
+            "type": "list",
+            "default": [
+                {"domain": "bio_signal"},
+                {"domain": "environment"}
+            ]
+        }
+    }
+}

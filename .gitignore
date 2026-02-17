@@ -1,0 +1,20 @@
+# Data
+datasets/
+
+# Python
+__pycache__/
+*.egg-info/
+*.pyc
+dist/
+build/
+
+# Logs
+pymyx.log
+
+# Caches
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/

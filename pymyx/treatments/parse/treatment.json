@@ -1,0 +1,32 @@
+{
+    "name": "parse",
+    "description": "Parse raw key:value CSV files into typed parquet files partitioned by domain and day",
+    "params": {
+        "delimiter": {
+            "type": "str",
+            "default": ";"
+        },
+        "tz": {
+            "type": "str",
+            "default": "UTC"
+        },
+        "timestamp_column": {
+            "type": "str",
+            "default": "ts"
+        },
+        "domains": {
+            "type": "dict",
+            "default": {
+                "bio_signal": {"prefix": "m", "dtype": "int"},
+                "environment": {"columns": ["outdoor_temp"], "dtype": "float"}
+            }
+        },
+        "file_name_substitute": {
+            "type": "list",
+            "default": [
+                {"src": "PREMANIP_GRACE", "target": "PREMANIP-GRACE"},
+                {"src": "premanip_grace", "target": "PREMANIP-GRACE"}
+            ]
+        }
+    }
+}

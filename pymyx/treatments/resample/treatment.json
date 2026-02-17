@@ -1,0 +1,21 @@
+{
+    "name": "resample",
+    "description": "Resample to fixed 1s grid with forward-fill for small gaps, NaN for large gaps",
+    "params": {
+        "freq": {
+            "type": "str",
+            "default": "1s"
+        },
+        "max_gap_fill_s": {
+            "type": "int",
+            "default": 20
+        },
+        "agg_method": {
+            "type": "dict",
+            "default": {
+                "bio_signal": "nearest",
+                "environment": "mean"
+            }
+        }
+    }
+}

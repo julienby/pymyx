@@ -1,0 +1,16 @@
+{
+    "name": "transform",
+    "description": "Apply mathematical transformations to selected columns",
+    "params": {
+        "transforms": {
+            "type": "list",
+            "default": [
+                {
+                    "function": "sqrt_inv",
+                    "target": {"domain": "bio_signal"},
+                    "mode": "add"
+                }
+            ]
+        }
+    }
+}

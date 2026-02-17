@@ -1,0 +1,38 @@
+{
+    "name": "exportnour",
+    "description": "Export aggregated parquet data to a single CSV file with column selection, renaming, and timezone conversion",
+    "params": {
+        "aggregation": {
+            "type": "str",
+            "default": "10s"
+        },
+        "domain": {
+            "type": "str",
+            "default": "bio_signal"
+        },
+        "tz": {
+            "type": "str",
+            "default": "Europe/Paris"
+        },
+        "from": {
+            "type": "str",
+            "default": ""
+        },
+        "to": {
+            "type": "str",
+            "default": ""
+        },
+        "columns": {
+            "type": "dict",
+            "default": {
+                "m0__raw__mean": "c0",
+                "m1__raw__mean": "c1",
+                "m2__raw__mean": "c2",
+                "m3__raw__mean": "c3",
+                "m4__raw__mean": "c4",
+                "m5__raw__mean": "c5",
+                "m6__raw__mean": "c6"
+            }
+        }
+    }
+}
