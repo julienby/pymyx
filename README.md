@@ -14,8 +14,24 @@ CSV bruts  -->  parse --> clean --> transform --> resample --> aggregate --> to_
 ```bash
 git clone <url-du-repo> ~/pymyx
 cd ~/pymyx
+
+# Installer les dependances et la commande pymyx
+pip install -e .
+
+# Avec les outils de dev (pytest, ruff)
 pip install -e ".[dev]"
 ```
+
+> **setuptools trop ancien ?** Si `pip install -e .` echoue avec `build_editable hook missing` :
+> `pip install --user --upgrade pip setuptools` puis relancer.
+
+> **`pymyx` not found ?** Ajouter `~/.local/bin` au PATH :
+> ```bash
+> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+> source ~/.bashrc
+> ```
+
+**Important** : toutes les commandes `pymyx` doivent etre lancees depuis le repertoire du projet (celui qui contient `flows/` et `datasets/`). Le mode editable (`-e`) est recommande pour le dev comme pour la prod.
 
 Verify:
 
