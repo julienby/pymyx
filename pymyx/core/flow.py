@@ -57,6 +57,13 @@ def run_flow(
         flow = json.load(f)
 
     dataset = flow.get("dataset")
+
+    # Use from/to from flow JSON as defaults (CLI overrides)
+    if time_from is None and "from" in flow:
+        time_from = parse_iso_utc(flow["from"])
+    if time_to is None and "to" in flow:
+        time_to = parse_iso_utc(flow["to"])
+
     steps = flow.get("steps", [])
     if not steps:
         raise ValueError(f"Flow '{name}' has no steps")
