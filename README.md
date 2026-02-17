@@ -111,8 +111,11 @@ pymyx flow valvometry_daily --from 2026-02-01 --to 2026-02-10
 # Incremental mode (only process new data since last run)
 pymyx flow valvometry_daily --last
 
-# Replace output instead of appending
+# Replace output for the time range being processed
 pymyx flow valvometry_daily --output-mode replace
+
+# Wipe all output directories and reprocess from scratch
+pymyx flow valvometry_daily --output-mode full-replace
 ```
 
 ### `pymyx run <treatment>`
