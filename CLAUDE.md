@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PyMyx is a minimal IoT time-series data processing pipeline for valvometric data. It processes raw sensor CSV files (key:value format) through a 6-step pipeline to produce ML-ready aggregated parquet files and export to PostgreSQL (parse → clean → transform → resample → aggregate → to_postgres).
+PyMyx is a minimal IoT time-series data processing pipeline for valvometric data. It processes raw sensor CSV files (key:value format) through a 7-step pipeline to produce ML-ready aggregated parquet files, export to PostgreSQL, and export to CSV (parse → clean → transform → resample → aggregate → to_postgres → exportnour).
 
 ## Build & Run
 
@@ -40,22 +40,23 @@ ruff check .
 - `pymyx/core/validator.py` — pydantic validation of treatment.json + param merging (defaults + overrides)
 - `pymyx/core/logger.py` — jsonlines event logging to `pymyx.log`
 
-### Pipeline (6 treatments)
+### Pipeline (7 treatments)
 
 | Step | Treatment | Input → Output | What it does |
 |------|-----------|----------------|--------------|
 | 1 | `parse` | 00_raw → 10_parsed | Parse key:value CSV → typed parquet, split by domain (bio_signal, environment) and day |
 | 2 | `clean` | 10_parsed → 20_clean | Drop duplicates, enforce min/max bounds, remove spikes via rolling median |
 | 3 | `transform` | 20_clean → 25_transform | Apply declarative mathematical transformations (sqrt_inv, log) to selected columns |
-| 4 | `resample` | 25_transform → 30_resampled | Regular 1s grid (86400 rows/day), floor to second, ffill small gaps (≤2s) |
+| 4 | `resample` | 25_transform → 30_resampled | Regular 1s grid from first valid data point, floor to second, ffill small gaps (≤2s) |
 | 5 | `aggregate` | 30_resampled → 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics (mean, std, min, max) |
 | 6 | `to_postgres` | any step → PostgreSQL | Export parquet data to PostgreSQL wide tables for observability (Grafana) |
+| 7 | `exportnour` | 40_aggregated → 61_exportnour | Export aggregated data to CSV per device, with column selection/renaming and timezone conversion |
 
 ### Key files
 
 - `pymyx/treatments/<name>/treatment.json` — declares params with types and defaults
 - `pymyx/treatments/<name>/run.py` — implements `def run(input_dir, output_dir, params)`
-- `flows/valvometry_daily.json` — defines the 5-step pipeline
+- `flows/valvometry_daily.json` — defines the 7-step pipeline
 
 ## Configuration
 
@@ -68,6 +69,7 @@ Key configurable params:
 - **resample**: `freq`, `max_gap_fill_s`, `agg_method` (per-domain aggregation for flooring)
 - **aggregate**: `windows` (list of time windows), `metrics` (list of aggregation functions)
 - **to_postgres**: `host`, `port`, `dbname`, `user`, `password` (connection), `table_template` (naming pattern), `mode` (append/replace), `sources` (list of domains with optional column filter)
+- **exportnour**: `aggregation` (window to select, default "10s"), `domain` (default "bio_signal"), `tz` (timezone, default "Europe/Paris"), `from`/`to` (date range, optional), `columns` (dict mapping source column → export name, controls selection, renaming and order)
 
 ## Data
 
@@ -81,4 +83,4 @@ Key configurable params:
 - Treatments live under `pymyx/treatments/`, flows under `flows/`
 - Each treatment has `treatment.json` (schema) + `run.py` (logic)
 - All logging goes to `pymyx.log` (jsonlines format, one event per line)
-- Pipeline stages are numbered: 00_raw, 10_parsed, 20_clean, 25_transform, 30_resampled, 40_aggregated, 60_postgres
+- Pipeline stages are numbered: 00_raw, 10_parsed, 20_clean, 25_transform, 30_resampled, 40_aggregated, 60_postgres, 61_exportnour
