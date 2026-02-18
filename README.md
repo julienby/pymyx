@@ -196,8 +196,9 @@ Flows are JSON files in `flows/`. The simplified format uses `dataset` to auto-r
             "treatment": "exportnour",
             "params": {
                 "columns": {
-                    "m0__raw__mean": "m0",
-                    "m1__raw__mean": "c1"
+                    "m0__raw__mean": {"name": "c0", "dtype": "int"},
+                    "m1__raw__mean": {"name": "c1", "dtype": "int"},
+                    "outdoor_temp__raw__mean": "temperature"
                 }
             }
         }
@@ -270,7 +271,7 @@ Each treatment is configured via `pymyx/treatments/<name>/treatment.json` which 
 | `domain` | `"bio_signal"` | Domain to export |
 | `tz` | `"Europe/Paris"` | Output timezone |
 | `from` / `to` | none | Date range filter (optional) |
-| `columns` | required | Dict mapping `source_column` -> `export_name` (controls selection, renaming, order) |
+| `columns` | m0-m11 as int | Dict mapping `source_column` -> `export_name` or `{"name": "...", "dtype": "int"}` (controls selection, renaming, order, and optional integer casting) |
 
 ## Project structure
 
