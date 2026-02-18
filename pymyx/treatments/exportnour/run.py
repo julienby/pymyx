@@ -16,7 +16,10 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     tz = params["tz"]
     date_from = params.get("from")
     date_to = params.get("to")
-    columns = params["columns"]
+    columns_raw = params["columns"]
+    # Support both str and dict values: {"name": "c0", "dtype": "int"} or "c0"
+    col_names = {src: (v["name"] if isinstance(v, dict) else v) for src, v in columns_raw.items()}
+    col_dtypes = {(v["name"] if isinstance(v, dict) else v): v["dtype"] for src, v in columns_raw.items() if isinstance(v, dict) and "dtype" in v}
 
     # Find matching parquet files (right domain + aggregation), grouped by device
     parquet_files = list_parquet_files(in_path)
@@ -65,13 +68,18 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
             merged = merged[merged["ts"] < pd.Timestamp(date_to, tz="UTC") + pd.Timedelta(days=1)]
 
         # Check that all requested source columns exist
-        missing = [c for c in columns if c not in merged.columns]
+        missing = [c for c in col_names if c not in merged.columns]
         if missing:
             raise ValueError(f"Columns not found in data: {missing}")
 
         # Select and rename columns
-        result = merged[["ts"] + list(columns.keys())].copy()
-        result = result.rename(columns=columns)
+        result = merged[["ts"] + list(col_names.keys())].copy()
+        result = result.rename(columns=col_names)
+
+        # Cast columns with dtype specified
+        for col, dtype in col_dtypes.items():
+            if dtype == "int":
+                result[col] = result[col].round().astype("Int64")
 
         # Convert timezone and format Time column
         result["ts"] = result["ts"].dt.tz_convert(tz)
@@ -79,7 +87,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         result = result.drop(columns=["ts"])
 
         # Reorder: Time first, then columns in declared order
-        output_cols = ["Time"] + list(columns.values())
+        output_cols = ["Time"] + list(col_names.values())
         result = result[output_cols]
 
         # Build output filename with actual date range from data

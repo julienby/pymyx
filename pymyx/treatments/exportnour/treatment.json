@@ -25,13 +25,18 @@
         "columns": {
             "type": "dict",
             "default": {
-                "m0__raw__mean": "c0",
-                "m1__raw__mean": "c1",
-                "m2__raw__mean": "c2",
-                "m3__raw__mean": "c3",
-                "m4__raw__mean": "c4",
-                "m5__raw__mean": "c5",
-                "m6__raw__mean": "c6"
+                "m0__raw__mean": {"name": "c0", "dtype": "int"},
+                "m1__raw__mean": {"name": "c1", "dtype": "int"},
+                "m2__raw__mean": {"name": "c2", "dtype": "int"},
+                "m3__raw__mean": {"name": "c3", "dtype": "int"},
+                "m4__raw__mean": {"name": "c4", "dtype": "int"},
+                "m5__raw__mean": {"name": "c5", "dtype": "int"},
+                "m6__raw__mean": {"name": "c6", "dtype": "int"},
+                "m7__raw__mean": {"name": "c7", "dtype": "int"},
+                "m8__raw__mean": {"name": "c8", "dtype": "int"},
+                "m9__raw__mean": {"name": "c9", "dtype": "int"},
+                "m10__raw__mean": {"name": "c10", "dtype": "int"},
+                "m11__raw__mean": {"name": "c11", "dtype": "int"}
             }
         }
     }
