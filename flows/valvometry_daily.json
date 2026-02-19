@@ -1,13 +1,13 @@
 {
     "name": "valvometry_daily",
-    "description": "Full daily pipeline: parse -> clean -> transform -> resample -> aggregate",
+    "description": "Full daily pipeline: parse -> clean -> resample -> transform -> aggregate",
     "dataset": "PREMANIP-GRACE",
     "from": "2026-02-03T09:55:00Z",
     "steps": [
         {"treatment": "parse"},
         {"treatment": "clean"},
-        {"treatment": "transform"},
         {"treatment": "resample"},
+        {"treatment": "transform"},
         {"treatment": "aggregate"},
         {
             "treatment": "to_postgres",
