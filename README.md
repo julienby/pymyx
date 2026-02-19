@@ -9,6 +9,8 @@ CSV bruts  -->  parse --> clean --> resample --> transform --> aggregate --> to_
                                                                         --> exportnour (CSV)
 ```
 
+PyMyx is designed as a **framework**: you install it once and use it as a black box. Your experiment lives in a separate project directory containing only your flows, params, datasets, and optional custom treatments.
+
 ## Installation
 
 ```bash
@@ -156,6 +158,27 @@ pymyx list treatments   # List available treatments
 pymyx list steps --flow valvometry_daily  # List steps in a flow
 ```
 
+## Custom treatments
+
+PyMyx discovers treatments from two locations, **local takes priority over built-ins**:
+
+1. `./treatments/<name>/` — your project (custom or overrides)
+2. `pymyx/treatments/<name>/` — built-in treatments (fallback)
+
+To add a custom treatment, create a directory in your project:
+
+```
+mon-projet/
+  treatments/
+    my_treatment/
+      treatment.json   # param schema with defaults
+      run.py           # def run(input_dir, output_dir, params)
+  flows/
+  datasets/
+```
+
+To override a built-in, create a treatment with the same name in `./treatments/`. To use only built-ins, simply omit the `treatments/` directory.
+
 ## Pipeline steps
 
 | # | Treatment | Directory | Description |
@@ -271,9 +294,11 @@ Each treatment is configured via `pymyx/treatments/<name>/treatment.json` which 
 | `domain` | `"bio_signal"` | Domain to export |
 | `tz` | `"Europe/Paris"` | Output timezone |
 | `from` / `to` | none | Date range filter (optional) |
-| `columns` | m0-m11 as int | Dict mapping `source_column` -> `export_name` or `{"name": "...", "dtype": "int"}` (controls selection, renaming, order, and optional integer casting) |
+| `columns` | m0-m11 as int | Dict mapping `source_column` -> `export_name` or `{"name": "...", "dtype": "int", "decimals": N}` (controls selection, renaming, order, integer casting, and optional float rounding) |
 
 ## Project structure
+
+### PyMyx (framework repo)
 
 ```
 pymyx/
@@ -286,27 +311,37 @@ pymyx/
     logger.py               # jsonlines event logging
     timefilter.py           # Time filtering and incremental processing
     filename.py             # Parquet filename conventions
-  treatments/
+  treatments/               # Built-in treatments
     parse/                  # treatment.json + run.py
     clean/
-    transform/
     resample/
+    transform/
     aggregate/
     to_postgres/
     exportnour/
-flows/                      # Flow definitions (JSON)
-datasets/                   # Data (gitignored)
-  <DATASET>/
-    00_raw/                 # Raw CSV input
-    10_parsed/              # Parquet, split by domain + day
-    20_clean/
-    25_resampled/
-    30_transform/
-    40_aggregated/
-    61_exportnour/          # CSV exports
 tests/
 scripts/
   hourly_sync.sh            # Cron script for incremental processing
+```
+
+### Your project repo
+
+```
+mon-projet/
+  treatments/               # Optional: custom or overriding treatments
+    my_treatment/
+      treatment.json
+      run.py
+  flows/                    # Flow definitions (JSON)
+  datasets/                 # Data (gitignored)
+    <DATASET>/
+      00_raw/               # Raw CSV input
+      10_parsed/            # Parquet, split by domain + day
+      20_clean/
+      25_resampled/
+      30_transform/
+      40_aggregated/
+      61_exportnour/        # CSV exports
 ```
 
 ## Production (cron)
