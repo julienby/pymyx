@@ -20,6 +20,17 @@ from pymyx.core.validator import load_treatment, merge_params, validate_input_di
 
 
 TREATMENTS_ROOT = Path(__file__).resolve().parent.parent / "treatments"
+def resolve_treatment_dir(name: str) -> Path:
+    """Return treatment directory: local ./treatments/<name> takes priority over built-ins."""
+    local = Path.cwd() / "treatments" / name
+    if local.is_dir():
+        return local
+    builtin = TREATMENTS_ROOT / name
+    if builtin.is_dir():
+        return builtin
+    raise FileNotFoundError(
+        f"Treatment '{name}' not found in {Path.cwd() / 'treatments'} nor {TREATMENTS_ROOT}"
+    )
 
 
 def _cleanup_tmpdir(tmpdir: Path) -> None:
@@ -88,7 +99,7 @@ def run_treatment(
     time_to=None,
     output_mode: str = "append",
 ) -> None:
-    treatment_dir = TREATMENTS_ROOT / name
+    treatment_dir = resolve_treatment_dir(name)
     schema = load_treatment(treatment_dir)
 
     # Inject __time_range for intra-day trimming (parse only)
