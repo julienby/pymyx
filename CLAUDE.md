@@ -133,6 +133,6 @@ Key configurable params:
 - Treatments live under `pymyx/treatments/`, flows under `flows/`
 - Each treatment has `treatment.json` (schema) + `run.py` (logic)
 - All logging goes to `pymyx.log` (jsonlines format, one event per line)
-- Pipeline stages are numbered: 00_raw, 10_parsed, 20_clean, 25_transform, 30_resampled, 40_aggregated, 60_postgres, 61_exportnour
+- Pipeline stages are numbered: 00_raw, 10_parsed, 20_clean, 25_resampled, 30_transform, 40_aggregated, 60_postgres, 61_exportnour
 - Datasets live under `datasets/<DATASET>/` (gitignored)
 - `pymyx init <DATASET>` scaffolds a new dataset with directories + flow template
