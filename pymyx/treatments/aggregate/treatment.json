@@ -4,7 +4,7 @@
     "params": {
         "windows": {
             "type": "list",
-            "default": ["10s", "60s", "5min", "1h"]
+            "default": ["1s", "10s", "60s", "5min", "1h"]
         },
         "metrics": {
             "type": "list",

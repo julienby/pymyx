@@ -27,13 +27,18 @@
                 "domain": "bio_signal",
                 "tz": "Europe/Paris",
                 "columns": {
-                    "m0__raw__mean": "m0",
+                    "m0__raw__mean": "c0",
                     "m1__raw__mean": "c1",
                     "m2__raw__mean": "c2",
                     "m3__raw__mean": "c3",
                     "m4__raw__mean": "c4",
                     "m5__raw__mean": "c5",
-                    "m6__raw__mean": "c6"
+                    "m6__raw__mean": "c6",
+                    "m7__raw__mean": "c7",
+                    "m8__raw__mean": "c8",
+                    "m9__raw__mean": "c9",
+                    "m10__raw__mean": "c10",
+                    "m11__raw__mean": "c11"
                 }
             }
         }
