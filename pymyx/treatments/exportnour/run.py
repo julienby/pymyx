@@ -20,6 +20,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     # Support both str and dict values: {"name": "c0", "dtype": "int"} or "c0"
     col_names = {src: (v["name"] if isinstance(v, dict) else v) for src, v in columns_raw.items()}
     col_dtypes = {(v["name"] if isinstance(v, dict) else v): v["dtype"] for src, v in columns_raw.items() if isinstance(v, dict) and "dtype" in v}
+    col_decimals = {(v["name"] if isinstance(v, dict) else v): v["decimals"] for src, v in columns_raw.items() if isinstance(v, dict) and "decimals" in v}
 
     # Find matching parquet files (right domain + aggregation), grouped by device
     parquet_files = list_parquet_files(in_path)
@@ -80,6 +81,10 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         for col, dtype in col_dtypes.items():
             if dtype == "int":
                 result[col] = result[col].round().astype("Int64")
+
+        # Round columns with decimals specified
+        for col, decimals in col_decimals.items():
+            result[col] = result[col].round(decimals)
 
         # Convert timezone and format Time column
         result["ts"] = result["ts"].dt.tz_convert(tz)
