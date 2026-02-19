@@ -5,8 +5,8 @@ Minimal IoT time-series data processing pipeline for valvometric data.
 Raw sensor CSV files (key:value format) go through a 7-step pipeline to produce aggregated parquet files, PostgreSQL exports, and CSV exports.
 
 ```
-CSV bruts  -->  parse --> clean --> transform --> resample --> aggregate --> to_postgres
-                                                                       --> exportnour (CSV)
+CSV bruts  -->  parse --> clean --> resample --> transform --> aggregate --> to_postgres
+                                                                        --> exportnour (CSV)
 ```
 
 ## Installation
@@ -127,7 +127,7 @@ pymyx run parse --input datasets/PREMANIP-GRACE/00_raw --output datasets/PREMANI
 
 # With custom params
 pymyx run aggregate \
-    --input datasets/PREMANIP-GRACE/30_resampled \
+    --input datasets/PREMANIP-GRACE/30_transform \
     --output datasets/PREMANIP-GRACE/40_aggregated \
     --params '{"windows": ["30s", "5min"], "metrics": ["mean", "median"]}'
 ```
@@ -162,9 +162,9 @@ pymyx list steps --flow valvometry_daily  # List steps in a flow
 |---|-----------|-----------|-------------|
 | 1 | `parse` | 00_raw -> 10_parsed | Parse key:value CSV into typed parquet, split by domain and day |
 | 2 | `clean` | 10_parsed -> 20_clean | Drop duplicates, enforce min/max bounds, remove spikes (rolling median) |
-| 3 | `transform` | 20_clean -> 25_transform | Apply mathematical transformations (sqrt_inv, log) to selected columns |
-| 4 | `resample` | 25_transform -> 30_resampled | Regular 1s grid, floor to second, forward-fill small gaps (<=2s) |
-| 5 | `aggregate` | 30_resampled -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics |
+| 3 | `resample` | 20_clean -> 25_resampled | Regular 1s grid, floor to second, forward-fill small gaps (<=2s) |
+| 4 | `transform` | 25_resampled -> 30_transform | Apply mathematical transformations (sqrt_inv, log) to selected columns |
+| 5 | `aggregate` | 30_transform -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics |
 | 6 | `to_postgres` | 40_aggregated -> PostgreSQL | Export to PostgreSQL wide tables (for Grafana) |
 | 7 | `exportnour` | 40_aggregated -> 61_exportnour | Export to CSV per device, with column renaming and timezone conversion |
 
@@ -179,8 +179,8 @@ Flows are JSON files in `flows/`. The simplified format uses `dataset` to auto-r
     "steps": [
         {"treatment": "parse"},
         {"treatment": "clean"},
-        {"treatment": "transform"},
         {"treatment": "resample"},
+        {"treatment": "transform"},
         {"treatment": "aggregate"},
         {
             "treatment": "to_postgres",
@@ -300,8 +300,8 @@ datasets/                   # Data (gitignored)
     00_raw/                 # Raw CSV input
     10_parsed/              # Parquet, split by domain + day
     20_clean/
-    25_transform/
-    30_resampled/
+    25_resampled/
+    30_transform/
     40_aggregated/
     61_exportnour/          # CSV exports
 tests/

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PyMyx is a minimal IoT time-series data processing pipeline for valvometric data. It processes raw sensor CSV files (key:value format) through a 7-step pipeline to produce ML-ready aggregated parquet files, export to PostgreSQL, and export to CSV (parse -> clean -> transform -> resample -> aggregate -> to_postgres -> exportnour).
+PyMyx is a minimal IoT time-series data processing pipeline for valvometric data. It processes raw sensor CSV files (key:value format) through a 7-step pipeline to produce ML-ready aggregated parquet files, export to PostgreSQL, and export to CSV (parse -> clean -> resample -> transform -> aggregate -> to_postgres -> exportnour).
 
 ## Build & Run
 
@@ -34,7 +34,7 @@ pymyx flow valvometry_daily --last
 pymyx run parse --input datasets/PREMANIP-GRACE/00_raw --output datasets/PREMANIP-GRACE/10_parsed
 
 # Run with custom params
-pymyx run aggregate --input datasets/PREMANIP-GRACE/30_resampled --output datasets/PREMANIP-GRACE/40_aggregated --params '{"windows": ["30s", "5min"], "metrics": ["mean", "median"]}'
+pymyx run aggregate --input datasets/PREMANIP-GRACE/30_transform --output datasets/PREMANIP-GRACE/40_aggregated --params '{"windows": ["30s", "5min"], "metrics": ["mean", "median"]}'
 
 # Show status of all datasets
 pymyx status
@@ -73,9 +73,9 @@ ruff check .
 |------|-----------|-----------------|--------------|
 | 1 | `parse` | 00_raw -> 10_parsed | Parse key:value CSV -> typed parquet, split by domain (bio_signal, environment) and day |
 | 2 | `clean` | 10_parsed -> 20_clean | Drop duplicates, enforce min/max bounds, remove spikes via rolling median |
-| 3 | `transform` | 20_clean -> 25_transform | Apply declarative mathematical transformations (sqrt_inv, log) to selected columns |
-| 4 | `resample` | 25_transform -> 30_resampled | Regular 1s grid from first valid data point, floor to second, ffill small gaps (<=2s) |
-| 5 | `aggregate` | 30_resampled -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics (mean, std, min, max) |
+| 3 | `resample` | 20_clean -> 25_resampled | Regular 1s grid from first valid data point, floor to second, ffill small gaps (<=2s) |
+| 4 | `transform` | 25_resampled -> 30_transform | Apply declarative mathematical transformations (sqrt_inv, log) to selected columns |
+| 5 | `aggregate` | 30_transform -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics (mean, std, min, max) |
 | 6 | `to_postgres` | 40_aggregated -> PostgreSQL | Export parquet data to PostgreSQL wide tables for observability (Grafana). Marked `external` in registry. |
 | 7 | `exportnour` | 40_aggregated -> 61_exportnour | Export aggregated data to CSV per device, with column selection/renaming and timezone conversion |
 

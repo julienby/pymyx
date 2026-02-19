@@ -5,9 +5,9 @@ DATASETS_PREFIX = "datasets"
 PIPELINE_STEPS = [
     {"treatment": "parse",       "input": "00_raw",        "output": "10_parsed"},
     {"treatment": "clean",       "input": "10_parsed",     "output": "20_clean"},
-    {"treatment": "transform",   "input": "20_clean",      "output": "25_transform"},
-    {"treatment": "resample",    "input": "25_transform",  "output": "30_resampled"},
-    {"treatment": "aggregate",   "input": "30_resampled",  "output": "40_aggregated"},
+    {"treatment": "resample",    "input": "20_clean",      "output": "25_resampled"},
+    {"treatment": "transform",   "input": "25_resampled",  "output": "30_transform"},
+    {"treatment": "aggregate",   "input": "30_transform",  "output": "40_aggregated"},
     {"treatment": "to_postgres", "input": "40_aggregated", "output": "60_postgres", "external": True},
     {"treatment": "exportnour",  "input": "40_aggregated", "output": "61_exportnour"},
 ]
