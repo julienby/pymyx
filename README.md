@@ -6,7 +6,7 @@ Raw sensor CSV files (key:value format) go through a 7-step pipeline to produce 
 
 ```
 CSV bruts  -->  parse --> clean --> resample --> transform --> aggregate --> to_postgres
-                                                                        --> exportnour (CSV)
+                                                                        --> exportcsv (CSV)
 ```
 
 PyMyx is designed as a **framework**: you install it once and use it as a black box. Your experiment lives in a separate project directory containing only your flows, params, datasets, and optional custom treatments.
@@ -189,7 +189,7 @@ To override a built-in, create a treatment with the same name in `./treatments/`
 | 4 | `transform` | 25_resampled -> 30_transform | Apply mathematical transformations (sqrt_inv, log) to selected columns |
 | 5 | `aggregate` | 30_transform -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics |
 | 6 | `to_postgres` | 40_aggregated -> PostgreSQL | Export to PostgreSQL wide tables (for Grafana) |
-| 7 | `exportnour` | 40_aggregated -> 61_exportnour | Export to CSV per device, with column renaming and timezone conversion |
+| 7 | `exportcsv` | 40_aggregated -> 61_exportcsv | Export to CSV per device, with column renaming and timezone conversion |
 
 ## Flow format
 
@@ -222,9 +222,9 @@ Flows are JSON files in `flows/`. Each step declares its `input` and `output` ex
             }
         },
         {
-            "treatment": "exportnour",
+            "treatment": "exportcsv",
             "input": "40_aggregated",
-            "output": "61_exportnour",
+            "output": "61_exportcsv",
             "params": {
                 "columns": {
                     "m0__raw__mean": {"name": "c0", "dtype": "int"},
@@ -305,7 +305,7 @@ Each treatment is configured via `pymyx/treatments/<name>/treatment.json` which 
 | `table_prefix` | `""` | Prefix added to table names |
 | `mode` | `"append"` | `append` or `replace` |
 
-### exportnour
+### exportcsv
 
 | Param | Default | Description |
 |-------|---------|-------------|
@@ -337,7 +337,7 @@ pymyx/
     transform/
     aggregate/
     to_postgres/
-    exportnour/
+    exportcsv/
 tests/
 scripts/
   hourly_sync.sh            # Cron script for incremental processing
@@ -360,7 +360,7 @@ mon-projet/
       25_resampled/
       30_transform/
       40_aggregated/
-      61_exportnour/        # CSV exports
+      61_exportcsv/        # CSV exports
 ```
 
 ## Production (cron)

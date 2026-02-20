@@ -110,7 +110,7 @@ Implémenté :
 - filtrage optionnel par `from` / `to` (dates YYYY-MM-DD)
 - agrégation 10s mean par défaut
 - un fichier CSV par device
-- traitement : `pymyx/treatments/exportnour/`
-- tests : `tests/test_exportnour.py`
+- traitement : `pymyx/treatments/exportcsv/`
+- tests : `tests/test_exportcsv.py`
 
 Fix associé : le resample démarre maintenant la grille au premier point de donnée valide (plus de lignes vides en début de journée quand le capteur n'envoie pas encore de bio_signal).

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PyMyx is a minimal IoT time-series data processing pipeline for valvometric data. It processes raw sensor CSV files (key:value format) through a 7-step pipeline to produce ML-ready aggregated parquet files, export to PostgreSQL, and export to CSV (parse -> clean -> resample -> transform -> aggregate -> to_postgres -> exportnour).
+PyMyx is a minimal IoT time-series data processing pipeline for valvometric data. It processes raw sensor CSV files (key:value format) through a 7-step pipeline to produce ML-ready aggregated parquet files, export to PostgreSQL, and export to CSV (parse -> clean -> resample -> transform -> aggregate -> to_postgres -> exportcsv).
 
 ## Build & Run
 
@@ -77,7 +77,7 @@ ruff check .
 | 4 | `transform` | 25_resampled -> 30_transform | Apply declarative mathematical transformations (sqrt_inv, log) to selected columns |
 | 5 | `aggregate` | 30_transform -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics (mean, std, min, max) |
 | 6 | `to_postgres` | 40_aggregated -> PostgreSQL | Export parquet data to PostgreSQL wide tables for observability (Grafana). Marked `external` in registry. |
-| 7 | `exportnour` | 40_aggregated -> 61_exportnour | Export aggregated data to CSV per device, with column selection/renaming and timezone conversion |
+| 7 | `exportcsv` | 40_aggregated -> 61_exportcsv | Export aggregated data to CSV per device, with column selection/renaming and timezone conversion |
 
 The pipeline registry lives in `pymyx/core/pipeline.py` (PIPELINE_STEPS). Steps marked `external: True` write to external services (not disk) and are excluded from the up-to-date check in `pymyx status`.
 
@@ -132,7 +132,7 @@ Key configurable params:
 - **resample**: `freq`, `max_gap_fill_s`, `agg_method` (per-domain aggregation for flooring)
 - **aggregate**: `windows` (list of time windows), `metrics` (list of aggregation functions)
 - **to_postgres**: `host`, `port`, `dbname`, `user`, `password` (connection), `table_template` (naming pattern), `mode` (append/replace), `sources` (list of domains with optional column filter)
-- **exportnour**: `aggregation` (window to select, default "10s"), `domain` (default "bio_signal"), `tz` (timezone, default "Europe/Paris"), `from`/`to` (date range, optional), `columns` (dict mapping source column -> export name, controls selection, renaming and order)
+- **exportcsv**: `aggregation` (window to select, default "10s"), `domain` (default "bio_signal"), `tz` (timezone, default "Europe/Paris"), `from`/`to` (date range, optional), `columns` (dict mapping source column -> export name, controls selection, renaming and order)
 
 ## Data
 
@@ -146,6 +146,6 @@ Key configurable params:
 - Treatments live under `pymyx/treatments/`, flows under `flows/`
 - Each treatment has `treatment.json` (schema) + `run.py` (logic)
 - All logging goes to `pymyx.log` (jsonlines format, one event per line)
-- Pipeline stages are numbered: 00_raw, 10_parsed, 20_clean, 25_resampled, 30_transform, 40_aggregated, 60_postgres, 61_exportnour
+- Pipeline stages are numbered: 00_raw, 10_parsed, 20_clean, 25_resampled, 30_transform, 40_aggregated, 60_postgres, 61_exportcsv
 - Datasets live under `datasets/<DATASET>/` (gitignored)
 - `pymyx init <DATASET>` scaffolds a new dataset with directories + flow template

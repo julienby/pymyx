@@ -1,5 +1,5 @@
 {
-    "name": "exportnour",
+    "name": "exportcsv",
     "description": "Export aggregated parquet data to a single CSV file with column selection, renaming, timezone conversion, and optional rounding",
     "params": {
         "aggregation": {

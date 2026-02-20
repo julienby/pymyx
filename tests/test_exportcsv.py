@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from pymyx.treatments.exportnour.run import run
+from pymyx.treatments.exportcsv.run import run
 
 
 def _make_aggregated_parquet(base_dir, device, day, data):

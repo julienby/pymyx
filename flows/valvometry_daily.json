@@ -3,7 +3,8 @@
     "description": "Full daily pipeline: parse -> clean -> resample -> transform -> aggregate -> to_postgres -> exportnour",
     "dataset": "PREMANIP-GRACE",
     "params": {
-        "from": "2026-02-03T09:55:00Z"
+        "from": "2026-02-03T09:55:00Z",
+        "to": "2026-02-18T08:30:00Z"
     },
     "steps": [
         {
@@ -45,9 +46,33 @@
             }
         },
         {
-            "treatment": "exportnour",
+            "treatment": "exportcsv",
             "input": "40_aggregated",
-            "output": "61_exportnour",
+            "output": "61_exportcsv",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__raw__mean": "c0",
+                    "m1__raw__mean": "c1",
+                    "m2__raw__mean": "c2",
+                    "m3__raw__mean": "c3",
+                    "m4__raw__mean": "c4",
+                    "m5__raw__mean": "c5",
+                    "m6__raw__mean": "c6",
+                    "m7__raw__mean": "c7",
+                    "m8__raw__mean": "c8",
+                    "m9__raw__mean": "c9",
+                    "m10__raw__mean": "c10",
+                    "m11__raw__mean": "c11"
+                }
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "input": "40_aggregated",
+            "output": "61_exportcsv",
             "params": {
                 "aggregation": "10s",
                 "domain": "bio_signal",
