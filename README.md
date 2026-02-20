@@ -193,20 +193,26 @@ To override a built-in, create a treatment with the same name in `./treatments/`
 
 ## Flow format
 
-Flows are JSON files in `flows/`. The simplified format uses `dataset` to auto-resolve paths:
+Flows are JSON files in `flows/`. Each step declares its `input` and `output` explicitly — the data flow is readable like a recipe, without having to look at any code.
 
 ```json
 {
     "name": "my-experiment",
+    "description": "Full pipeline for MY-EXPERIMENT",
     "dataset": "MY-EXPERIMENT",
+    "params": {
+        "from": "2026-02-01T00:00:00Z"
+    },
     "steps": [
-        {"treatment": "parse"},
-        {"treatment": "clean"},
-        {"treatment": "resample"},
-        {"treatment": "transform"},
-        {"treatment": "aggregate"},
+        {"treatment": "parse",     "input": "00_raw",       "output": "10_parsed"},
+        {"treatment": "clean",     "input": "10_parsed",    "output": "20_clean"},
+        {"treatment": "resample",  "input": "20_clean",     "output": "25_resampled"},
+        {"treatment": "transform", "input": "25_resampled", "output": "30_transform"},
+        {"treatment": "aggregate", "input": "30_transform", "output": "40_aggregated"},
         {
             "treatment": "to_postgres",
+            "input": "40_aggregated",
+            "output": "60_postgres",
             "params": {
                 "host": "my-server",
                 "dbname": "mydb",
@@ -217,6 +223,8 @@ Flows are JSON files in `flows/`. The simplified format uses `dataset` to auto-r
         },
         {
             "treatment": "exportnour",
+            "input": "40_aggregated",
+            "output": "61_exportnour",
             "params": {
                 "columns": {
                     "m0__raw__mean": {"name": "c0", "dtype": "int"},
@@ -229,7 +237,18 @@ Flows are JSON files in `flows/`. The simplified format uses `dataset` to auto-r
 }
 ```
 
-Steps without `params` use defaults from `treatment.json`. Steps can also override `input`/`output` explicitly if needed.
+**Paths** (`input`/`output`) are relative to `datasets/<dataset>/` when `dataset` is set, or absolute otherwise.
+
+**Params hierarchy** (lowest to highest priority):
+
+| Level | Where | Wins over |
+|-------|-------|-----------|
+| `treatment.json` | default values per treatment | — |
+| `flow.params` | inherited by all steps | treatment defaults |
+| `step.params` | overrides for that step only | flow params |
+| CLI `--params` / `--from` / `--to` | runtime override | everything |
+
+`from`/`to` in `flow.params` set the default time range for all steps; CLI `--from`/`--to` override them.
 
 ## Configuration
 

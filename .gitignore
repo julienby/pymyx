@@ -9,7 +9,10 @@ dist/
 build/
 
 # Logs
-pymyx.log
+*.log
+
+# Exploration / comparaison (hors projet)
+comparaison/
 
 # Caches
 .pytest_cache/

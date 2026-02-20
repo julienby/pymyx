@@ -90,23 +90,36 @@ The pipeline registry lives in `pymyx/core/pipeline.py` (PIPELINE_STEPS). Steps 
 
 ## Flow format
 
-Simplified format (recommended): `dataset` field auto-resolves input/output paths via pipeline registry.
+Declarative format: `input`/`output` explicit per step, `params` at flow level for inherited values.
 
 ```json
 {
     "name": "my-flow",
+    "description": "...",
     "dataset": "MY-DATASET",
+    "params": {
+        "from": "2026-02-01T00:00:00Z"
+    },
     "steps": [
-        {"treatment": "parse"},
-        {"treatment": "clean"},
-        {"treatment": "to_postgres", "params": {"host": "..."}}
+        {"treatment": "parse",  "input": "00_raw",    "output": "10_parsed"},
+        {"treatment": "clean",  "input": "10_parsed", "output": "20_clean"},
+        {
+            "treatment": "to_postgres",
+            "input": "40_aggregated",
+            "output": "60_postgres",
+            "params": {"host": "..."}
+        }
     ]
 }
 ```
 
-Legacy format (still supported): explicit `input`/`output` per step.
+Paths are relative to `datasets/<dataset>/` when `dataset` is set, or absolute otherwise.
 
-Steps can override `input`/`output` even in simplified format. Params override defaults from treatment.json.
+**Params hierarchy** (lowest → highest priority): `treatment.json defaults` → `flow.params` → `step.params` → `CLI`
+
+- `flow.params` = inherited by all steps (`from`/`to` are extracted for time filtering, not passed to treatments)
+- `step.params` = overrides flow params for that step only
+- CLI `--from`/`--to`/`--params` = always wins
 
 ## Configuration
 

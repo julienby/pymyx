@@ -62,14 +62,30 @@ Chaque traitement déclare ce fichier. C'est la seule source de vérité : sché
 }
 
 ## Contrat flow.json
+Le flow se lit comme une recette : input/output visibles à chaque étape, flux de données transparent.
 {
   "name": "string",
-  "version": "semver",
   "description": "string",
+  "dataset": "string",
+  "params": {
+    "from": "ISO8601 (optionnel)",
+    "to": "ISO8601 (optionnel)",
+    "<param>": "<valeur héritée par toutes les étapes>"
+  },
   "steps": [
-    { "treatment": "<nom>", "input": "<dossier>", "output": "<dossier>" }
+    {
+      "treatment": "<nom>",
+      "input": "<dossier relatif à datasets/<dataset>/ ou absolu>",
+      "output": "<dossier relatif à datasets/<dataset>/ ou absolu>",
+      "params": { "<surcharge pour cette étape uniquement>": "..." }
+    }
   ]
 }
+
+Hiérarchie des params (priorité croissante) :
+  treatment.json defaults → flow.params → step.params → CLI (--params / --from / --to)
+
+Les params from/to dans flow.params définissent la fenêtre temporelle par défaut (CLI a le dernier mot).
 
 ## Contrat run.py
 Chaque run.py expose une seule fonction publique :
@@ -229,14 +245,30 @@ Chaque traitement déclare ce fichier. C'est la seule source de vérité : sché
 }
 
 ## Contrat flow.json
+Le flow se lit comme une recette : input/output visibles à chaque étape, flux de données transparent.
 {
   "name": "string",
-  "version": "semver",
   "description": "string",
+  "dataset": "string",
+  "params": {
+    "from": "ISO8601 (optionnel)",
+    "to": "ISO8601 (optionnel)",
+    "<param>": "<valeur héritée par toutes les étapes>"
+  },
   "steps": [
-    { "treatment": "<nom>", "input": "<dossier>", "output": "<dossier>" }
+    {
+      "treatment": "<nom>",
+      "input": "<dossier relatif à datasets/<dataset>/ ou absolu>",
+      "output": "<dossier relatif à datasets/<dataset>/ ou absolu>",
+      "params": { "<surcharge pour cette étape uniquement>": "..." }
+    }
   ]
 }
+
+Hiérarchie des params (priorité croissante) :
+  treatment.json defaults → flow.params → step.params → CLI (--params / --from / --to)
+
+Les params from/to dans flow.params définissent la fenêtre temporelle par défaut (CLI a le dernier mot).
 
 ## Contrat run.py
 Chaque run.py expose une seule fonction publique :

@@ -87,17 +87,25 @@ def cmd_init(args, _parser):
     raw_dir = Path(DATASETS_PREFIX) / dataset / "00_raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate a simplified flow template
+    # Generate a declarative flow template with explicit input/output per step
     from pymyx.core.flow import FLOWS_ROOT
     flow_path = FLOWS_ROOT / f"{dataset.lower()}.json"
     if flow_path.exists():
         print(f"Flow already exists: {flow_path}")
         raise SystemExit(1)
 
+    def _step_entry(s):
+        entry = {"treatment": s["treatment"], "input": s["input"]}
+        if "output" in s:
+            entry["output"] = s["output"]
+        return entry
+
     flow = {
         "name": dataset.lower(),
+        "description": f"Pipeline for dataset {dataset}",
         "dataset": dataset,
-        "steps": [{"treatment": s["treatment"]} for s in PIPELINE_STEPS],
+        "params": {},
+        "steps": [_step_entry(s) for s in PIPELINE_STEPS],
     }
     FLOWS_ROOT.mkdir(parents=True, exist_ok=True)
     flow_path.write_text(json.dumps(flow, indent=4) + "\n")
@@ -113,7 +121,7 @@ def cmd_init(args, _parser):
 def cmd_status(_args, _parser):
     from datetime import datetime
     from pathlib import Path
-    from pymyx.core.flow import FLOWS_ROOT
+    from pymyx.core.flow import FLOWS_ROOT, _resolve_path
     from pymyx.core.pipeline import DATASETS_PREFIX, PIPELINE_STEPS, resolve_paths
 
     external = {s["treatment"] for s in PIPELINE_STEPS if s.get("external")}
@@ -139,7 +147,7 @@ def cmd_status(_args, _parser):
         for s in flow.get("steps", []):
             treatment = s["treatment"]
             if "output" in s:
-                out_dir = Path(s["output"])
+                out_dir = Path(_resolve_path(dataset, s["output"]))
             else:
                 _, out_str = resolve_paths(dataset, treatment)
                 out_dir = Path(out_str)

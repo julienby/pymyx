@@ -3,12 +3,15 @@ import json
 import sys
 from pathlib import Path
 
-from pymyx.core.pipeline import resolve_paths
+from pymyx.core.pipeline import DATASETS_PREFIX, resolve_paths
 from pymyx.core.runner import run_treatment
 from pymyx.core.timefilter import parse_iso_utc, resolve_last_range
 
 
 FLOWS_ROOT = Path(__file__).resolve().parent.parent.parent / "flows"
+
+# Params that control execution context, not passed as treatment params
+_META_PARAMS = {"from", "to"}
 
 
 def _filter_steps(steps, from_step=None, to_step=None, step=None):
@@ -39,6 +42,13 @@ def _filter_steps(steps, from_step=None, to_step=None, step=None):
     return steps[start:end]
 
 
+def _resolve_path(dataset: str, path: str) -> str:
+    """Prefix a relative path with datasets/<dataset>/. Absolute paths are unchanged."""
+    if Path(path).is_absolute():
+        return path
+    return f"{DATASETS_PREFIX}/{dataset}/{path}"
+
+
 def run_flow(
     name: str,
     time_from=None,
@@ -58,19 +68,38 @@ def run_flow(
 
     dataset = flow.get("dataset")
 
-    # Use from/to from flow JSON as defaults (CLI overrides)
-    if time_from is None and "from" in flow:
-        time_from = parse_iso_utc(flow["from"])
-    if time_to is None and "to" in flow:
-        time_to = parse_iso_utc(flow["to"])
+    # Flow-level params: inherited by all steps (hierarchy: flow > treatment defaults)
+    flow_params = dict(flow.get("params", {}))
+    # Backward compat: from/to at top level
+    for key in ("from", "to"):
+        if key in flow and key not in flow_params:
+            flow_params[key] = flow[key]
+
+    # Extract time range from flow params (CLI overrides)
+    if time_from is None and "from" in flow_params:
+        time_from = parse_iso_utc(flow_params["from"])
+    if time_to is None and "to" in flow_params:
+        time_to = parse_iso_utc(flow_params["to"])
+
+    # Inherited treatment params = flow params minus meta-params (from/to)
+    inherited = {k: v for k, v in flow_params.items() if k not in _META_PARAMS}
 
     steps = flow.get("steps", [])
     if not steps:
         raise ValueError(f"Flow '{name}' has no steps")
 
-    # Resolve paths from pipeline registry when dataset is present
-    if dataset:
-        for s in steps:
+    # Resolve paths and merge params per step
+    for s in steps:
+        # Merge: inherited flow params + step params (step overrides flow)
+        s["params"] = {**inherited, **s.get("params", {})}
+
+        if dataset:
+            # Resolve relative paths to datasets/<dataset>/<path>
+            if "input" in s:
+                s["input"] = _resolve_path(dataset, s["input"])
+            if "output" in s:
+                s["output"] = _resolve_path(dataset, s["output"])
+            # Fallback to registry if paths not declared in step
             if "input" not in s or "output" not in s:
                 inp, out = resolve_paths(dataset, s["treatment"])
                 s.setdefault("input", inp)
@@ -82,6 +111,8 @@ def run_flow(
     # full-replace: wipe all output directories before running
     if output_mode == "full-replace":
         for s in steps:
+            if "output" not in s:
+                continue
             out = Path(s["output"])
             if out.exists():
                 count = sum(1 for f in out.rglob("*") if f.is_file())
@@ -109,7 +140,7 @@ def run_flow(
     for i, s in enumerate(steps, 1):
         treatment = s["treatment"]
         input_dir = s["input"]
-        output_dir = s["output"]
+        output_dir = s.get("output", "")
         params = s.get("params", {})
 
         print(f"[flow] Step {i}/{len(steps)}: {treatment}")
