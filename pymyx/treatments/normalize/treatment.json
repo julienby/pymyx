@@ -36,6 +36,16 @@
             "type": "bool",
             "default": true,
             "description": "Clip normalized values to [0, 1]. Handles outliers beyond fit range."
+        },
+        "fit_window_days": {
+            "type": "integer",
+            "default": 0,
+            "description": "When fitting, use only the last N days of available data. 0 = use all data."
+        },
+        "min_range_warn": {
+            "type": "float",
+            "default": 0,
+            "description": "Warn if fitted range (P98 - P2) is below this value for any column. 0 = disabled. Set to expected minimum physiological range."
         }
     }
 }

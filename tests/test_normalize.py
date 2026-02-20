@@ -130,6 +130,97 @@ class TestClip:
         assert any(v > 1.0 or v < 0.0 for v in all_vals)
 
 
+class TestFitWindowDays:
+    def _make_multiday(self, tmp_path):
+        """4 days: day1-2 with small range (closed), day3-4 with large range (open+close)."""
+        inp = tmp_path / "input"
+        # Day 1-2: mussel mostly closed, small range (0..10)
+        for day in ["2026-01-20", "2026-01-21"]:
+            _make_parquet(inp, "EXP_pil-90", "bio_signal", day, {
+                "m0": list(range(0, 10))
+            })
+        # Day 3-4: full behavioral range (0..99)
+        for day in ["2026-01-22", "2026-01-23"]:
+            _make_parquet(inp, "EXP_pil-90", "bio_signal", day, {
+                "m0": list(range(0, 100))
+            })
+        return tmp_path
+
+    def test_window_restricts_fit_files(self, tmp_path):
+        data = self._make_multiday(tmp_path)
+        out = data / "output"
+        # Window of 2 days -> only day3 and day4 used for fit
+        run(str(data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "fit_window_days": 2})
+        meta = json.loads((out / PARAMS_FILE).read_text())["_meta"]
+        assert meta["n_files"] == 2
+
+    def test_window_zero_uses_all_files(self, tmp_path):
+        data = self._make_multiday(tmp_path)
+        out = data / "output"
+        run(str(data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "fit_window_days": 0})
+        meta = json.loads((out / PARAMS_FILE).read_text())["_meta"]
+        assert meta["n_files"] == 4
+
+    def test_large_window_on_closed_days_biases_p98(self, tmp_path):
+        """Fitting on closed days only yields a small P98 — the risk case."""
+        data = self._make_multiday(tmp_path)
+        out = data / "output"
+        # Window of 4 days but first 2 are "closed" -> P98 biased by small-range days
+        # Window of 2 days on last 2 days -> correct P98
+        out_full = data / "out_full"
+        out_window = data / "out_window"
+        run(str(data / "input"), str(out_full),
+            {**DEFAULT_PARAMS, "fit": True, "fit_window_days": 0})
+        run(str(data / "input"), str(out_window),
+            {**DEFAULT_PARAMS, "fit": True, "fit_window_days": 2})
+        p98_full = json.loads((out_full / PARAMS_FILE).read_text())["EXP_pil-90"]["m0"]["p98"]
+        p98_window = json.loads((out_window / PARAMS_FILE).read_text())["EXP_pil-90"]["m0"]["p98"]
+        # Window (days 3-4 only) should have higher or equal P98 than full (diluted by closed days)
+        assert p98_window >= p98_full
+
+    def test_window_one_day_picks_last_day_only(self, tmp_path):
+        data = self._make_multiday(tmp_path)
+        out = data / "output"
+        # Window of 1 day -> only 2026-01-23 (last day, large range)
+        run(str(data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "fit_window_days": 1})
+        meta = json.loads((out / PARAMS_FILE).read_text())["_meta"]
+        assert meta["n_files"] == 1
+
+
+class TestMinRangeWarn:
+    def test_warns_when_range_too_small(self, sample_data, capsys):
+        out = sample_data / "output"
+        # P10/P90 on range(0,100) -> range ~80, warn threshold 200 -> triggers
+        run(str(sample_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True,
+             "percentile_min": 10.0, "percentile_max": 90.0,
+             "min_range_warn": 200})
+        captured = capsys.readouterr()
+        assert "WARNING" in captured.out
+        assert "range" in captured.out
+
+    def test_no_warn_when_range_sufficient(self, sample_data, capsys):
+        out = sample_data / "output"
+        # P0/P100 on range(0,100) -> range=99, warn threshold=50 -> no warning
+        run(str(sample_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True,
+             "percentile_min": 0.0, "percentile_max": 100.0,
+             "min_range_warn": 50})
+        captured = capsys.readouterr()
+        assert "WARNING" not in captured.out
+
+    def test_warn_disabled_by_default(self, sample_data, capsys):
+        out = sample_data / "output"
+        run(str(sample_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True,
+             "percentile_min": 49.0, "percentile_max": 51.0})  # tiny range
+        captured = capsys.readouterr()
+        assert "WARNING" not in captured.out
+
+
 class TestErrors:
     def test_missing_params_file_raises(self, sample_data):
         out = sample_data / "output"
