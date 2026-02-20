@@ -130,6 +130,108 @@ class TestClip:
         assert any(v > 1.0 or v < 0.0 for v in all_vals)
 
 
+@pytest.fixture
+def sqrt_inv_data(tmp_path):
+    """Data with both raw (m0) and transformed (m0__sqrt_inv) columns."""
+    inp = tmp_path / "input"
+    for source in ["EXP_pil-90", "EXP_pil-98"]:
+        _make_parquet(inp, source, "bio_signal", "2026-01-20", {
+            "m0": list(range(0, 100)),
+            "m1": list(range(0, 100)),
+            "m0__sqrt_inv": [1 / (x + 1) ** 0.5 for x in range(100)],
+            "m1__sqrt_inv": [1 / (x + 2) ** 0.5 for x in range(100)],
+        })
+    return tmp_path
+
+
+class TestPatternColumns:
+    def test_wildcard_adds_new_columns(self, sqrt_inv_data):
+        """Pattern dict creates new __norm columns, keeps originals."""
+        out = sqrt_inv_data / "output"
+        columns = {"*__sqrt_inv": "*__sqrt_inv__norm"}
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "columns": columns})
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "columns": columns})
+
+        df = pd.read_parquet(next((out / "domain=bio_signal").glob("*pil-90*")))
+        # Original columns untouched
+        assert "m0__sqrt_inv" in df.columns
+        assert "m1__sqrt_inv" in df.columns
+        # New normalized columns added
+        assert "m0__sqrt_inv__norm" in df.columns
+        assert "m1__sqrt_inv__norm" in df.columns
+        # Raw columns not normalized (not in pattern)
+        assert "m0" in df.columns
+        assert "m1" in df.columns
+
+    def test_wildcard_norm_values_in_range(self, sqrt_inv_data):
+        out = sqrt_inv_data / "output"
+        columns = {"*__sqrt_inv": "*__sqrt_inv__norm"}
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "columns": columns})
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "columns": columns})
+
+        for f in (out / "domain=bio_signal").glob("*.parquet"):
+            df = pd.read_parquet(f)
+            assert df["m0__sqrt_inv__norm"].between(0.0, 1.0).all()
+            assert df["m1__sqrt_inv__norm"].between(0.0, 1.0).all()
+
+    def test_original_columns_unchanged(self, sqrt_inv_data):
+        """Original sqrt_inv values must be bit-for-bit identical after normalize."""
+        out = sqrt_inv_data / "output"
+        columns = {"*__sqrt_inv": "*__sqrt_inv__norm"}
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "columns": columns})
+
+        inp_file = next((sqrt_inv_data / "input" / "domain=bio_signal").glob("*pil-90*"))
+        out_file = next((out / "domain=bio_signal").glob("*pil-90*"))
+        df_in = pd.read_parquet(inp_file)
+        df_out = pd.read_parquet(out_file)
+        np.testing.assert_array_equal(
+            df_in["m0__sqrt_inv"].values,
+            df_out["m0__sqrt_inv"].values,
+        )
+
+    def test_params_indexed_by_input_col(self, sqrt_inv_data):
+        """normalize_params.json keys are input column names, not output."""
+        out = sqrt_inv_data / "output"
+        columns = {"*__sqrt_inv": "*__sqrt_inv__norm"}
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "columns": columns})
+
+        params = json.loads((out / PARAMS_FILE).read_text())
+        device_params = params["EXP_pil-90"]
+        assert "m0__sqrt_inv" in device_params
+        assert "m0__sqrt_inv__norm" not in device_params
+
+    def test_list_columns_replaces_inplace(self, sqrt_inv_data):
+        """Explicit list normalizes in-place: no new columns created."""
+        out = sqrt_inv_data / "output"
+        columns = ["m0__sqrt_inv", "m1__sqrt_inv"]
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "columns": columns})
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "columns": columns})
+
+        df = pd.read_parquet(next((out / "domain=bio_signal").glob("*pil-90*")))
+        assert "m0__sqrt_inv__norm" not in df.columns
+        assert df["m0__sqrt_inv"].between(0.0, 1.0).all()
+
+    def test_empty_columns_normalizes_all_inplace(self, sqrt_inv_data):
+        """Empty list normalizes all numeric columns in-place."""
+        out = sqrt_inv_data / "output"
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "fit": True, "columns": []})
+        run(str(sqrt_inv_data / "input"), str(out),
+            {**DEFAULT_PARAMS, "columns": []})
+
+        df = pd.read_parquet(next((out / "domain=bio_signal").glob("*pil-90*")))
+        for col in ["m0", "m1", "m0__sqrt_inv", "m1__sqrt_inv"]:
+            assert df[col].between(0.0, 1.0).all(), f"{col} not in [0,1]"
+
+
 class TestFitWindowDays:
     def _make_multiday(self, tmp_path):
         """4 days: day1-2 with small range (closed), day3-4 with large range (open+close)."""

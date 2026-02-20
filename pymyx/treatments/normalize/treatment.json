@@ -28,9 +28,9 @@
             "description": "Domain to normalize"
         },
         "columns": {
-            "type": "list",
+            "type": "object",
             "default": [],
-            "description": "Columns to normalize. Empty = all numeric columns in the domain."
+            "description": "Columns to normalize. [] = all numeric in-place. [\"m0\",\"m1\"] = explicit in-place. {\"*__sqrt_inv\": \"*__sqrt_inv__norm\"} = wildcard pattern, adds new columns (originals kept)."
         },
         "clip": {
             "type": "bool",
