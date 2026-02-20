@@ -7,7 +7,8 @@ PIPELINE_STEPS = [
     {"treatment": "clean",       "input": "10_parsed",     "output": "20_clean"},
     {"treatment": "resample",    "input": "20_clean",      "output": "25_resampled"},
     {"treatment": "transform",   "input": "25_resampled",  "output": "30_transform"},
-    {"treatment": "aggregate",   "input": "30_transform",  "output": "40_aggregated"},
+    {"treatment": "normalize",   "input": "30_transform",  "output": "35_normalized"},
+    {"treatment": "aggregate",   "input": "35_normalized", "output": "40_aggregated"},
     {"treatment": "to_postgres", "input": "40_aggregated", "output": "60_postgres", "external": True},
     {"treatment": "exportcsv",   "input": "40_aggregated", "output": "61_exportcsv"},
 ]

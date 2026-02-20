@@ -1,0 +1,41 @@
+{
+    "name": "normalize",
+    "description": "Normalize columns to [0,1] per device using percentile-based min-max. Run with fit=true to compute and save params, then fit=false for incremental runs.",
+    "params": {
+        "fit": {
+            "type": "bool",
+            "default": false,
+            "description": "If true, compute percentile params from all input data and save normalize_params.json. If false, load existing params (error if missing)."
+        },
+        "method": {
+            "type": "str",
+            "default": "percentile",
+            "description": "Normalization method: 'percentile' (robust, recommended) or 'minmax' (sensitive to outliers)"
+        },
+        "percentile_min": {
+            "type": "float",
+            "default": 2.0,
+            "description": "Lower percentile bound (used with method=percentile)"
+        },
+        "percentile_max": {
+            "type": "float",
+            "default": 98.0,
+            "description": "Upper percentile bound (used with method=percentile)"
+        },
+        "domain": {
+            "type": "str",
+            "default": "bio_signal",
+            "description": "Domain to normalize"
+        },
+        "columns": {
+            "type": "list",
+            "default": [],
+            "description": "Columns to normalize. Empty = all numeric columns in the domain."
+        },
+        "clip": {
+            "type": "bool",
+            "default": true,
+            "description": "Clip normalized values to [0, 1]. Handles outliers beyond fit range."
+        }
+    }
+}
