@@ -44,7 +44,7 @@
         },
         "min_range_warn": {
             "type": "float",
-            "default": 0,
+            "default": 0.0,
             "description": "Warn if fitted range (P98 - P2) is below this value for any column. 0 = disabled. Set to expected minimum physiological range."
         }
     }
