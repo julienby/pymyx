@@ -8,10 +8,33 @@ from pymyx.core.runner import run_treatment
 from pymyx.core.timefilter import parse_iso_utc, resolve_last_range
 
 
-FLOWS_ROOT = Path(__file__).resolve().parent.parent.parent / "flows"
+_BUILTIN_FLOWS_ROOT = Path(__file__).resolve().parent.parent.parent / "flows"
 
 # Params that control execution context, not passed as treatment params
 _META_PARAMS = {"from", "to"}
+
+
+def get_flows_root() -> Path:
+    """Return the flows directory: local ./flows/ takes priority over built-ins."""
+    local = Path.cwd() / "flows"
+    return local if local.is_dir() else _BUILTIN_FLOWS_ROOT
+
+
+def _find_flow(name: str) -> Path:
+    """Find a flow file: local ./flows/<name>.json takes priority over built-ins."""
+    local = Path.cwd() / "flows" / f"{name}.json"
+    if local.exists():
+        return local
+    builtin = _BUILTIN_FLOWS_ROOT / f"{name}.json"
+    if builtin.exists():
+        return builtin
+    raise FileNotFoundError(
+        f"Flow '{name}' not found in {Path.cwd() / 'flows'} nor {_BUILTIN_FLOWS_ROOT}"
+    )
+
+
+# Keep FLOWS_ROOT as an alias for backward compat (cmd_list, cmd_status import it)
+FLOWS_ROOT = _BUILTIN_FLOWS_ROOT
 
 
 def _filter_steps(steps, from_step=None, to_step=None, step=None):
@@ -59,9 +82,7 @@ def run_flow(
     to_step: str | None = None,
     step: str | None = None,
 ) -> None:
-    flow_path = FLOWS_ROOT / f"{name}.json"
-    if not flow_path.exists():
-        raise FileNotFoundError(f"Flow not found: {flow_path}")
+    flow_path = _find_flow(name)
 
     with open(flow_path) as f:
         flow = json.load(f)

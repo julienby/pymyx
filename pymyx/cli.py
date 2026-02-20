@@ -55,11 +55,11 @@ def cmd_run(args, parser):
 
 
 def cmd_list(args, _parser):
-    from pymyx.core.flow import FLOWS_ROOT
+    from pymyx.core.flow import get_flows_root, _find_flow as find_flow
     from pymyx.core.runner import TREATMENTS_ROOT
 
     if args.what == "flows":
-        for f in sorted(FLOWS_ROOT.glob("*.json")):
+        for f in sorted(get_flows_root().glob("*.json")):
             print(f"  {f.stem}")
     elif args.what == "treatments":
         for d in sorted(TREATMENTS_ROOT.iterdir()):
@@ -69,9 +69,10 @@ def cmd_list(args, _parser):
         if not args.flow:
             print("Error: --flow required with 'pymyx list steps'", file=sys.stderr)
             raise SystemExit(1)
-        flow_path = FLOWS_ROOT / f"{args.flow}.json"
-        if not flow_path.exists():
-            print(f"Error: flow '{args.flow}' not found", file=sys.stderr)
+        try:
+            flow_path = find_flow(args.flow)
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
             raise SystemExit(1)
         with open(flow_path) as f:
             flow = json.load(f)
@@ -168,12 +169,12 @@ def cmd_init(args, _parser):
 def cmd_status(_args, _parser):
     from datetime import datetime
     from pathlib import Path
-    from pymyx.core.flow import FLOWS_ROOT, _resolve_path
+    from pymyx.core.flow import get_flows_root, _resolve_path
     from pymyx.core.pipeline import DATASETS_PREFIX, PIPELINE_STEPS, resolve_paths
 
     external = {s["treatment"] for s in PIPELINE_STEPS if s.get("external")}
 
-    flows = sorted(FLOWS_ROOT.glob("*.json"))
+    flows = sorted(get_flows_root().glob("*.json"))
     if not flows:
         print("No flows found.")
         return
