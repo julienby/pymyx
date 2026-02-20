@@ -80,20 +80,50 @@ def cmd_list(args, _parser):
 
 
 def cmd_init(args, _parser):
+    import os
     from pathlib import Path
-    from pymyx.core.pipeline import DATASETS_PREFIX, PIPELINE_STEPS
+    from pymyx.core.pipeline import PIPELINE_STEPS
 
     dataset = args.dataset
-    raw_dir = Path(DATASETS_PREFIX) / dataset / "00_raw"
-    raw_dir.mkdir(parents=True, exist_ok=True)
+    project_dir = Path(args.path).resolve() if args.path else Path.cwd()
 
-    # Generate a declarative flow template with explicit input/output per step
-    from pymyx.core.flow import FLOWS_ROOT
-    flow_path = FLOWS_ROOT / f"{dataset.lower()}.json"
+    datasets_dir = project_dir / "datasets" / dataset
+    flows_dir = project_dir / "flows"
+    treatments_dir = project_dir / "treatments"
+
+    # Check flow doesn't already exist
+    flow_path = flows_dir / f"{dataset.lower()}.json"
     if flow_path.exists():
         print(f"Flow already exists: {flow_path}")
         raise SystemExit(1)
 
+    # Create all pipeline stage directories
+    created = []
+    for s in PIPELINE_STEPS:
+        for key in ("input", "output"):
+            if key in s and not s.get("external"):
+                stage_dir = datasets_dir / s[key]
+                stage_dir.mkdir(parents=True, exist_ok=True)
+                created.append(stage_dir)
+
+    # 00_raw: symlink to existing data or create empty
+    raw_dir = datasets_dir / "00_raw"
+    if args.raw:
+        raw_src = Path(args.raw).resolve()
+        if not raw_src.exists():
+            print(f"Error: --raw path does not exist: {raw_src}", file=sys.stderr)
+            raise SystemExit(1)
+        if raw_dir.exists() and not raw_dir.is_symlink():
+            # already created above as empty dir, replace with symlink
+            raw_dir.rmdir()
+        if raw_dir.is_symlink():
+            raw_dir.unlink()
+        os.symlink(raw_src, raw_dir)
+
+    # Create treatments/ placeholder
+    treatments_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate flow
     def _step_entry(s):
         entry = {"treatment": s["treatment"], "input": s["input"]}
         if "output" in s:
@@ -107,15 +137,32 @@ def cmd_init(args, _parser):
         "params": {},
         "steps": [_step_entry(s) for s in PIPELINE_STEPS],
     }
-    FLOWS_ROOT.mkdir(parents=True, exist_ok=True)
+    flows_dir.mkdir(parents=True, exist_ok=True)
     flow_path.write_text(json.dumps(flow, indent=4) + "\n")
 
-    print(f"Created {raw_dir}/")
-    print(f"Created {flow_path}")
+    # Print created structure
+    print(f"Initialized project at {project_dir}/")
     print()
-    print(f"Next steps:")
-    print(f"  1. Copy your CSV files into {raw_dir}/")
-    print(f"  2. Run: pymyx flow {dataset.lower()}")
+    print(f"  flows/")
+    print(f"    {dataset.lower()}.json")
+    print(f"  treatments/              (custom treatments, optional)")
+    print(f"  datasets/{dataset}/")
+    seen = []
+    for s in PIPELINE_STEPS:
+        for key in ("input", "output"):
+            stage = s.get(key)
+            if stage and stage not in seen:
+                seen.append(stage)
+    for stage in seen:
+        suffix = "  <- symlink" if stage == "00_raw" and args.raw else ""
+        print(f"    {stage}/{suffix}")
+    print()
+    if args.raw:
+        print(f"  00_raw -> {Path(args.raw).resolve()}")
+        print()
+    print("Next steps:")
+    print(f"  1. Edit flows/{dataset.lower()}.json (configure params, to_postgres, etc.)")
+    print(f"  2. pymyx flow {dataset.lower()}")
 
 
 def cmd_status(_args, _parser):
@@ -212,8 +259,12 @@ def main():
                         help="Flow name (required for 'steps')")
 
     # pymyx init
-    p_init = sub.add_parser("init", help="Initialize a new dataset")
+    p_init = sub.add_parser("init", help="Initialize a new dataset project skeleton")
     p_init.add_argument("dataset", help="Dataset name (e.g. MY-EXPERIMENT)")
+    p_init.add_argument("--path", default=None,
+                        help="Project directory to create skeleton in (default: current directory)")
+    p_init.add_argument("--raw", default=None,
+                        help="Path to existing raw CSV directory (creates a symlink as 00_raw)")
 
     # pymyx status
     p_status = sub.add_parser("status", help="Show status of all datasets")
