@@ -20,7 +20,10 @@
         {
             "treatment": "resample",
             "input": "20_clean",
-            "output": "25_resampled"
+            "output": "25_resampled",
+            "params": {
+                "max_gap_fill_s": 20
+            }
         },
         {
             "treatment": "transform",
