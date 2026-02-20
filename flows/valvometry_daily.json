@@ -33,7 +33,8 @@
             "output": "35_normalized",
             "params": {
                 "fit": false,
-                "domain": "bio_signal"
+                "domain": "bio_signal",
+                "columns": {"*__sqrt_inv": "*__sqrt_inv__norm"}
             }
         },
         {
