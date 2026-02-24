@@ -37,7 +37,7 @@
             "params": {
                 "fit": true,
                 "domain": "bio_signal",
-                "columns": {"*__sqrt_inv": "*__sqrt_inv__norm"}
+                "columns": {"*__cbrt_inv": "*__cbrt_inv__norm"}
             }
         },
         {
@@ -86,24 +86,24 @@
         {
             "treatment": "exportcsv",
             "input": "40_aggregated",
-            "output": "62_exportcsv_sqrt_inv_norm",
+            "output": "62_exportcsv_cbrt_inv_norm",
             "params": {
                 "aggregation": "10s",
                 "domain": "bio_signal",
                 "tz": "Europe/Paris",
                 "columns": {
-                    "m0__sqrt_inv__norm__mean": "c0",
-                    "m1__sqrt_inv__norm__mean": "c1",
-                    "m2__sqrt_inv__norm__mean": "c2",
-                    "m3__sqrt_inv__norm__mean": "c3",
-                    "m4__sqrt_inv__norm__mean": "c4",
-                    "m5__sqrt_inv__norm__mean": "c5",
-                    "m6__sqrt_inv__norm__mean": "c6",
-                    "m7__sqrt_inv__norm__mean": "c7",
-                    "m8__sqrt_inv__norm__mean": "c8",
-                    "m9__sqrt_inv__norm__mean": "c9",
-                    "m10__sqrt_inv__norm__mean": "c10",
-                    "m11__sqrt_inv__norm__mean": "c11"
+                    "m0__cbrt_inv__norm__mean": "c0",
+                    "m1__cbrt_inv__norm__mean": "c1",
+                    "m2__cbrt_inv__norm__mean": "c2",
+                    "m3__cbrt_inv__norm__mean": "c3",
+                    "m4__cbrt_inv__norm__mean": "c4",
+                    "m5__cbrt_inv__norm__mean": "c5",
+                    "m6__cbrt_inv__norm__mean": "c6",
+                    "m7__cbrt_inv__norm__mean": "c7",
+                    "m8__cbrt_inv__norm__mean": "c8",
+                    "m9__cbrt_inv__norm__mean": "c9",
+                    "m10__cbrt_inv__norm__mean": "c10",
+                    "m11__cbrt_inv__norm__mean": "c11"
                 }
             }
         }

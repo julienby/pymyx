@@ -8,6 +8,7 @@ from pymyx.core.filename import build_parquet_path, list_parquet_files, parse_pa
 
 TRANSFORMS = {
     "sqrt_inv": lambda s: 1.0 / np.sqrt(s.where(s > 0, other=np.nan)),
+    "cbrt_inv": lambda s: 1.0 / np.cbrt(s.where(s > 0, other=np.nan)),
     "log": lambda s: np.log(s.where(s > 0, other=np.nan)),
 }
 

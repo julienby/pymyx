@@ -6,7 +6,7 @@
             "type": "list",
             "default": [
                 {
-                    "function": "sqrt_inv",
+                    "function": "cbrt_inv",
                     "target": {"domain": "bio_signal"},
                     "mode": "add"
                 }
