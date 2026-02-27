@@ -7,6 +7,7 @@ from pymyx.core.filename import FileParts, build_parquet_path, parse_raw_stem
 
 
 def run(input_dir: str, output_dir: str, params: dict) -> None:
+    fmt = params["format"]
     delimiter = params["delimiter"]
     tz = params["tz"]
     ts_col = params["timestamp_column"]
@@ -29,7 +30,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     print(f"  [parse] Found {len(csv_files)} CSV files")
 
     for csv_file in csv_files:
-        df = parse_file(csv_file, delimiter, ts_col, tz)
+        df = parse_file(csv_file, fmt, delimiter, ts_col, tz)
         if df.empty:
             continue
 
@@ -41,7 +42,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
             if not cols:
                 continue
 
-            domain_df = df[[ts_col] + cols].copy()
+            domain_df = df[["ts"] + cols].copy()
             dtype = domain_spec.get("dtype", "float")
             for c in cols:
                 numeric = pd.to_numeric(domain_df[c], errors="coerce")
@@ -52,15 +53,19 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                 else:
                     domain_df[c] = numeric.astype("Float64")
 
+            rename = domain_spec.get("rename", {})
+            if rename:
+                domain_df = domain_df.rename(columns=rename)
+
             # Trim rows on boundary days
             if trim_from is not None:
-                domain_df = domain_df[domain_df[ts_col] >= trim_from]
+                domain_df = domain_df[domain_df["ts"] >= trim_from]
             if trim_to is not None:
-                domain_df = domain_df[domain_df[ts_col] <= trim_to]
+                domain_df = domain_df[domain_df["ts"] <= trim_to]
             if domain_df.empty:
                 continue
 
-            for day, day_df in domain_df.groupby(domain_df[ts_col].dt.date):
+            for day, day_df in domain_df.groupby(domain_df["ts"].dt.date):
                 parts = FileParts(
                     experience=experience,
                     device_id=device_id,
@@ -75,7 +80,19 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     print(f"  [parse] Wrote {count} parquet files to {out_path}")
 
 
-def parse_file(csv_file: Path, delimiter: str, ts_col: str, tz: str) -> pd.DataFrame:
+def parse_file(csv_file: Path, fmt: str, delimiter: str, ts_col: str, tz: str) -> pd.DataFrame:
+    if fmt == "kv_csv":
+        return parse_kv_csv(csv_file, delimiter, ts_col, tz)
+    raise ValueError(f"Unknown parse format: {fmt!r}")
+
+
+def parse_kv_csv(csv_file: Path, delimiter: str, ts_col: str, tz: str) -> pd.DataFrame:
+    """KV-CSV format: timestamp (Zulu) followed by x key:value columns.
+
+    The first field is the timestamp (identified by ts_col in the source CSV).
+    Output timestamp column is always named 'ts' for pipeline consistency.
+    Rule: lines without at least one key:value pair are silently discarded.
+    """
     rows = []
     with open(csv_file) as f:
         for line in f:
@@ -83,20 +100,20 @@ def parse_file(csv_file: Path, delimiter: str, ts_col: str, tz: str) -> pd.DataF
             if not line:
                 continue
             parts = line.split(delimiter)
-            timestamp = parts[0]
-            record = {ts_col: timestamp}
+            record = {"ts": parts[0]}
             for part in parts[1:]:
                 if ":" not in part:
                     continue
                 key, val = part.split(":", 1)
                 record[key] = val
-            rows.append(record)
+            if len(record) > 1:
+                rows.append(record)
 
     if not rows:
         return pd.DataFrame()
 
     df = pd.DataFrame(rows)
-    df[ts_col] = pd.to_datetime(df[ts_col], format="ISO8601", utc=(tz == "UTC"))
+    df["ts"] = pd.to_datetime(df["ts"], format="ISO8601", utc=(tz == "UTC"))
     return df
 
 

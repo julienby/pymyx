@@ -1,7 +1,11 @@
 {
     "name": "parse",
-    "description": "Parse raw key:value CSV files into typed parquet files partitioned by domain and day",
+    "description": "Parse raw CSV files into typed parquet files partitioned by domain and day",
     "params": {
+        "format": {
+            "type": "str",
+            "default": "kv_csv"
+        },
         "delimiter": {
             "type": "str",
             "default": ";"

@@ -1,0 +1,88 @@
+{
+    "name": "bp1",
+    "description": "BP1 pipeline: parse -> clean -> resample -> transform -> aggregate -> exportcsv",
+    "dataset": "BP1",
+    "steps": [
+        {
+            "treatment": "parse",
+            "input": "00_raw",
+            "output": "10_parsed",
+            "params": {
+                "timestamp_column": "datetime",
+                "domains": {
+                    "bio_signal": {
+                        "prefix": "i99",
+                        "dtype": "int",
+                        "rename": {
+                            "i99001": "m0",
+                            "i99002": "m1",
+                            "i99003": "m2",
+                            "i99004": "m3",
+                            "i99005": "m4",
+                            "i99006": "m5"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "treatment": "clean",
+            "input": "10_parsed",
+            "output": "20_clean"
+        },
+        {
+            "treatment": "resample",
+            "input": "20_clean",
+            "output": "25_resampled"
+        },
+        {
+            "treatment": "transform",
+            "input": "25_resampled",
+            "output": "30_transform"
+        },
+        {
+            "treatment": "aggregate",
+            "input": "30_transform",
+            "output": "40_aggregated",
+            "params": {
+                "windows": ["10s", "60s"]
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "input": "40_aggregated",
+            "output": "61_exportcsv_raw",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__raw__mean": "c0",
+                    "m1__raw__mean": "c1",
+                    "m2__raw__mean": "c2",
+                    "m3__raw__mean": "c3",
+                    "m4__raw__mean": "c4",
+                    "m5__raw__mean": "c5"
+                }
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "input": "40_aggregated",
+            "output": "62_exportcsv_cbrt_inv",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__cbrt_inv__mean": "c0",
+                    "m1__cbrt_inv__mean": "c1",
+                    "m2__cbrt_inv__mean": "c2",
+                    "m3__cbrt_inv__mean": "c3",
+                    "m4__cbrt_inv__mean": "c4",
+                    "m5__cbrt_inv__mean": "c5"
+                }
+            }
+        }
+    ]
+}
