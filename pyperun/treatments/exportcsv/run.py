@@ -68,31 +68,36 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         if date_to:
             merged = merged[merged["ts"] < pd.Timestamp(date_to, tz="UTC") + pd.Timedelta(days=1)]
 
-        # Check that all requested source columns exist
+        # Select only columns that exist (warn about missing ones)
         missing = [c for c in col_names if c not in merged.columns]
         if missing:
-            raise ValueError(f"Columns not found in data: {missing}")
+            print(f"  [exportcsv] {device_id}: skipping missing columns: {missing}")
+        available = {k: v for k, v in col_names.items() if k in merged.columns}
+        if not available:
+            print(f"  [exportcsv] {device_id}: no columns available, skipping")
+            continue
 
-        # Select and rename columns
-        result = merged[["ts"] + list(col_names.keys())].copy()
-        result = result.rename(columns=col_names)
+        result = merged[["ts"] + list(available.keys())].copy()
+        result = result.rename(columns=available)
+        col_names_used = available
 
-        # Cast columns with dtype specified
+        # Cast columns with dtype specified (only if present)
         for col, dtype in col_dtypes.items():
-            if dtype == "int":
+            if col in result.columns and dtype == "int":
                 result[col] = result[col].round().astype("Int64")
 
-        # Round columns with decimals specified
+        # Round columns with decimals specified (only if present)
         for col, decimals in col_decimals.items():
-            result[col] = result[col].round(decimals)
+            if col in result.columns:
+                result[col] = result[col].round(decimals)
 
         # Convert timezone and format Time column
         result["ts"] = result["ts"].dt.tz_convert(tz)
         result["Time"] = result["ts"].dt.strftime("%Y-%m-%d %H:%M:%S")
         result = result.drop(columns=["ts"])
 
-        # Reorder: Time first, then columns in declared order
-        output_cols = ["Time"] + list(col_names.values())
+        # Reorder: Time first, then columns in declared order (only available ones)
+        output_cols = ["Time"] + list(col_names_used.values())
         result = result[output_cols]
 
         # Build output filename with actual date range from data

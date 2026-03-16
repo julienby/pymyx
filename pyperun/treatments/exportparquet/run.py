@@ -67,9 +67,13 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         if columns_map:
             missing = [c for c in columns_map if c not in merged.columns]
             if missing:
-                raise ValueError(f"Columns not found in data: {missing}")
-            result = merged[["ts"] + list(columns_map.keys())].copy()
-            result = result.rename(columns=columns_map)
+                print(f"  [exportparquet] {device_id}: skipping missing columns: {missing}")
+            available = {k: v for k, v in columns_map.items() if k in merged.columns}
+            if not available:
+                print(f"  [exportparquet] {device_id}: no columns available, skipping")
+                continue
+            result = merged[["ts"] + list(available.keys())].copy()
+            result = result.rename(columns=available)
         else:
             result = merged.copy()
 
