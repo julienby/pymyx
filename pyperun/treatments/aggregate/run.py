@@ -12,6 +12,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
     windows = params["windows"]
     metrics = params["metrics"]
+    decimals = params.get("decimals", -1)
 
     parquet_files = list_parquet_files(in_path)
     if not parquet_files:
@@ -43,6 +44,10 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
             ]
 
             agg_df = agg_df.reset_index()
+
+            if decimals >= 0:
+                float_cols = [c for c in agg_df.columns if c != "ts"]
+                agg_df[float_cols] = agg_df[float_cols].round(decimals)
 
             out_parts = parts.with_aggregation("aggregated", window)
             agg_df.to_parquet(build_parquet_path(out_parts, out_path), index=False)

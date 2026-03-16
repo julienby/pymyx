@@ -9,6 +9,10 @@
         "metrics": {
             "type": "list",
             "default": ["mean", "std"]
+        },
+        "decimals": {
+            "type": "int",
+            "default": -1
         }
     }
 }
