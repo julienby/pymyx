@@ -1,24 +1,61 @@
 {
     "name": "to_postgres",
     "description": "Export parquet data to PostgreSQL wide tables",
+    "input_format": "Parquet files: `<source>__<domain>__<YYYY-MM-DD>__<window>.parquet`",
+    "output_format": "PostgreSQL tables: `<table_prefix><experience>__<step>__<aggregation>` (one table per domain/aggregation combination)",
     "params": {
-        "host": {"type": "str", "default": "localhost"},
-        "port": {"type": "int", "default": 5432},
-        "dbname": {"type": "str", "default": ""},
-        "user": {"type": "str", "default": ""},
-        "password": {"type": "str", "default": ""},
-        "table_prefix": {"type": "str", "default": ""},
-        "table_template": {"type": "str", "default": "{experience}__{step}__{aggregation}"},
-        "mode": {"type": "str", "default": "append"},
-        "from": {"type": "str", "default": ""},
-        "to": {"type": "str", "default": ""},
-        "aggregations": {"type": "list", "default": []},
+        "host": {
+            "type": "str",
+            "default": "localhost",
+            "description": "PostgreSQL server hostname"
+        },
+        "port": {
+            "type": "int",
+            "default": 5432,
+            "description": "PostgreSQL server port"
+        },
+        "dbname": {
+            "type": "str",
+            "default": "",
+            "description": "Target database name"
+        },
+        "user": {
+            "type": "str",
+            "default": "",
+            "description": "PostgreSQL user"
+        },
+        "password": {
+            "type": "str",
+            "default": "",
+            "description": "PostgreSQL password"
+        },
+        "table_prefix": {
+            "type": "str",
+            "default": "",
+            "description": "Optional prefix prepended to all table names"
+        },
+        "table_template": {
+            "type": "str",
+            "default": "{experience}__{step}__{aggregation}",
+            "description": "Table name template. Variables: {experience} (dataset name), {step} (domain), {aggregation} (window)"
+        },
+        "mode": {
+            "type": "str",
+            "default": "append",
+            "description": "Write mode: append (insert new rows) or replace (drop and recreate table)"
+        },
+        "aggregations": {
+            "type": "list",
+            "default": [],
+            "description": "List of aggregation windows to export (e.g. [\"10s\", \"60s\"]). Empty = all available windows."
+        },
         "sources": {
             "type": "list",
             "default": [
                 {"domain": "bio_signal"},
                 {"domain": "environment"}
-            ]
+            ],
+            "description": "List of domain sources to export. Each entry: domain (required), columns (optional list to filter)"
         }
     }
 }

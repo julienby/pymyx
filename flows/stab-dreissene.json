@@ -48,7 +48,7 @@
             "input": "30_transform",
             "output": "40_aggregated",
             "params": {
-                "windows": ["10s", "60s", "5min"]
+                "windows": ["1s", "10s", "60s", "5min"]
             }
         },
         {
@@ -58,6 +58,25 @@
             "output": "61_exportcsv",
             "params": {
                 "aggregation": "10s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__raw__mean": "m0",
+                    "m1__raw__mean": "m1",
+                    "m2__raw__mean": "m2",
+                    "m3__raw__mean": "m3",
+                    "m4__raw__mean": "m4",
+                    "m5__raw__mean": "m5"
+                }
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "name": "exportcsv",
+            "input": "40_aggregated",
+            "output": "61_exportcsv",
+            "params": {
+                "aggregation": "1s",
                 "domain": "bio_signal",
                 "tz": "Europe/Paris",
                 "columns": {

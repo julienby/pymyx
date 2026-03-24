@@ -1,26 +1,23 @@
 {
     "name": "exportparquet",
     "description": "Export aggregated parquet data to a single parquet file per device with column selection and optional renaming",
+    "input_format": "Parquet files: `<source>__<domain>__<YYYY-MM-DD>__<window>.parquet`",
+    "output_format": "One parquet file per source device: `<source>.parquet`",
     "params": {
         "aggregation": {
             "type": "str",
-            "default": "10s"
+            "default": "10s",
+            "description": "Aggregation window to select for export (must match a window produced by aggregate)"
         },
         "domain": {
             "type": "str",
-            "default": "bio_signal"
-        },
-        "from": {
-            "type": "str",
-            "default": ""
-        },
-        "to": {
-            "type": "str",
-            "default": ""
+            "default": "bio_signal",
+            "description": "Domain to export (bio_signal or environment)"
         },
         "columns": {
             "type": "dict",
-            "default": {}
+            "default": {},
+            "description": "Column selection and renaming: map source column name to output name. Empty = export all columns as-is."
         }
     }
 }

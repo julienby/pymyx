@@ -1,18 +1,23 @@
 {
     "name": "aggregate",
     "description": "Compute rolling aggregates over multiple configurable time windows",
+    "input_format": "Parquet files: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
+    "output_format": "Parquet files per window: `<source>__<domain>__<YYYY-MM-DD>__<window>.parquet`",
     "params": {
         "windows": {
             "type": "list",
-            "default": ["1s", "10s", "60s", "5min", "1h"]
+            "default": ["1s", "10s", "60s", "5min", "1h"],
+            "description": "Time windows for aggregation (pandas offset aliases, e.g. 10s, 5min, 1h)"
         },
         "metrics": {
             "type": "list",
-            "default": ["mean", "std"]
+            "default": ["mean", "std"],
+            "description": "Aggregation functions to compute per window (mean, std, min, max, median)"
         },
         "decimals": {
             "type": "int",
-            "default": -1
+            "default": -1,
+            "description": "Decimal places for rounding aggregated values (-1 = no rounding)"
         }
     }
 }

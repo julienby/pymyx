@@ -1,21 +1,26 @@
 {
     "name": "resample",
     "description": "Resample to fixed 1s grid with forward-fill for small gaps, NaN for large gaps",
+    "input_format": "Parquet files: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
+    "output_format": "Parquet files on regular time grid: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
     "params": {
         "freq": {
             "type": "str",
-            "default": "1s"
+            "default": "1s",
+            "description": "Target resampling frequency (pandas offset alias, e.g. 1s, 500ms)"
         },
         "max_gap_fill_s": {
             "type": "int",
-            "default": 20
+            "default": 20,
+            "description": "Maximum gap (in seconds) to forward-fill. Larger gaps become NaN."
         },
         "agg_method": {
             "type": "dict",
             "default": {
                 "bio_signal": "nearest",
                 "environment": "mean"
-            }
+            },
+            "description": "Per-domain aggregation method when multiple raw samples fall in the same target bin (nearest, mean, first, last)"
         }
     }
 }

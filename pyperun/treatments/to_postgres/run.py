@@ -248,10 +248,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     table_prefix = params.get("table_prefix", "")
     table_template = params["table_template"]
     aggregations = params.get("aggregations", [])
-    date_from = params.get("from") or None
-    date_to = params.get("to") or None
-    ts_from = pd.Timestamp(date_from, tz="UTC") if date_from else None
-    ts_to = pd.Timestamp(date_to, tz="UTC") + pd.Timedelta(days=1) if date_to else None
 
     parquet_files = list_parquet_files(in_path)
     if not parquet_files:
@@ -304,19 +300,8 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                 max_ts = _get_max_ts(conn, table_name)
 
             for day in sorted(days.keys()):
-                if date_from and day < date_from[:10]:
-                    continue
-                if date_to and day > date_to[:10]:
-                    continue
                 day_files = days[day]
                 df = _pivot_wide(day_files, sources)
-                if df.empty:
-                    continue
-
-                if ts_from is not None:
-                    df = df[df["ts"] >= ts_from]
-                if ts_to is not None:
-                    df = df[df["ts"] < ts_to]
                 if df.empty:
                     continue
 

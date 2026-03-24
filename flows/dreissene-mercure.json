@@ -1,0 +1,170 @@
+{
+    "name": "dreissene-mercure",
+    "description": "DREISSENE-MERCURE pipeline: parse -> clean -> resample -> transform -> aggregate -> exportcsv/exportparquet (valvométrie m0..m4; pil98 n'a que 5 capteurs)",
+    "dataset": "DREISSENE-MERCURE",
+    "params": {},
+    "steps": [
+        {
+            "treatment": "parse",
+            "input": "00_raw",
+            "output": "10_parsed",
+            "params": {
+                "format": "kv_csv",
+                "delimiter": ";",
+                "tz": "UTC",
+                "timestamp_column": "ts",
+                "domains": {
+                    "bio_signal": {"prefix": "m", "dtype": "int"}
+                },
+                "file_name_substitute": []
+            }
+        },
+        {
+            "treatment": "clean",
+            "input": "10_parsed",
+            "output": "20_clean",
+            "params": {
+                "drop_duplicates": true,
+                "domains": {
+                    "bio_signal": {
+                        "min_value": 0,
+                        "max_value": 800,
+                        "spike_window": 10,
+                        "spike_threshold": 100
+                    }
+                }
+            }
+        },
+        {
+            "treatment": "resample",
+            "input": "20_clean",
+            "output": "25_resampled",
+            "params": {
+                "freq": "1s",
+                "max_gap_fill_s": 20,
+                "agg_method": {
+                    "bio_signal": "nearest"
+                }
+            }
+        },
+        {
+            "treatment": "transform",
+            "input": "25_resampled",
+            "output": "30_transform",
+            "params": {
+                "transforms": [
+                    {
+                        "function": "cbrt_inv",
+                        "target": {"domain": "bio_signal"},
+                        "mode": "add"
+                    }
+                ]
+            }
+        },
+        {
+            "treatment": "aggregate",
+            "input": "30_transform",
+            "output": "40_aggregated",
+            "params": {
+                "windows": ["1s", "10s", "60s", "5min"],
+                "metrics": ["mean", "std"],
+                "decimals": 3
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "name": "exportcsv_10s",
+            "input": "40_aggregated",
+            "output": "61_exportcsv_nour",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__raw__mean": {"name": "c0", "dtype": "int"},
+                    "m1__raw__mean": {"name": "c1", "dtype": "int"},
+                    "m2__raw__mean": {"name": "c2", "dtype": "int"},
+                    "m3__raw__mean": {"name": "c3", "dtype": "int"},
+                    "m4__raw__mean": {"name": "c4", "dtype": "int"},
+                    "m5__raw__mean": {"name": "c5", "dtype": "int"}
+                }
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "name": "exportcsv_1s",
+            "input": "40_aggregated",
+            "output": "61_exportcsv_nour",
+            "params": {
+                "aggregation": "1s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__raw__mean": {"name": "c0", "dtype": "int"},
+                    "m1__raw__mean": {"name": "c1", "dtype": "int"},
+                    "m2__raw__mean": {"name": "c2", "dtype": "int"},
+                    "m3__raw__mean": {"name": "c3", "dtype": "int"},
+                    "m4__raw__mean": {"name": "c4", "dtype": "int"},
+                    "m5__raw__mean": {"name": "c5", "dtype": "int"}
+                }
+            }
+        },
+        {
+            "treatment": "exportparquet",
+            "name": "exportparquet_10s",
+            "input": "40_aggregated",
+            "output": "62_exportparquet",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "columns": {
+                    "m0__raw__mean": "c0",
+                    "m1__raw__mean": "c1",
+                    "m2__raw__mean": "c2",
+                    "m3__raw__mean": "c3",
+                    "m4__raw__mean": "c4",
+                    "m5__raw__mean": "c5"
+                }
+            }
+        },
+        {
+            "treatment": "exportparquet",
+            "name": "exportparquet_60s",
+            "input": "40_aggregated",
+            "output": "62_exportparquet",
+            "params": {
+                "aggregation": "60s",
+                "domain": "bio_signal",
+                "columns": {
+                    "m0__raw__mean": "c0",
+                    "m1__raw__mean": "c1",
+                    "m2__raw__mean": "c2",
+                    "m3__raw__mean": "c3",
+                    "m4__raw__mean": "c4",
+                    "m5__raw__mean": "c5"
+                }
+            }
+        },
+        {
+            "treatment": "to_postgres",
+            "input": "40_aggregated",
+            "output": "60_postgres",
+            "params": {
+                "host": "pil-86",
+                "port": 5432,
+                "dbname": "icaging",
+                "user": "icaging",
+                "password": "icaging",
+                "table_prefix": "PROD_",
+                "table_template": "DREISSENE_MERCURE__AGGREGATED__{aggregation}",
+                "mode": "replace",
+                "from": "2023-04-14T00:00:00Z",
+                "to": "2023-04-29T00:00:00Z",
+                "aggregations": [],
+                "sources": [
+                    {"domain": "bio_signal"}
+                ]
+            }
+        }
+    ]
+}

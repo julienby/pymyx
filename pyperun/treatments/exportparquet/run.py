@@ -13,8 +13,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
     aggregation = params["aggregation"]
     domain = params["domain"]
-    date_from = params.get("from")
-    date_to = params.get("to")
     columns_map = params.get("columns", {})  # {src_col: dest_col} or empty = keep all
 
     # Find matching parquet files (right domain + aggregation), grouped by device
@@ -27,10 +25,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         if parts.domain != domain:
             continue
         if parts.aggregation != aggregation:
-            continue
-        if date_from and parts.day < date_from:
-            continue
-        if date_to and parts.day > date_to:
             continue
         by_device[parts.device_id].append(pf)
         if experience is None:
@@ -56,12 +50,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
         merged = pd.concat(frames, ignore_index=True)
         merged = merged.sort_values("ts").reset_index(drop=True)
-
-        # Filter by from/to on actual timestamps
-        if date_from:
-            merged = merged[merged["ts"] >= pd.Timestamp(date_from, tz="UTC")]
-        if date_to:
-            merged = merged[merged["ts"] < pd.Timestamp(date_to, tz="UTC") + pd.Timedelta(days=1)]
 
         # Select and rename columns (or keep all if columns is empty)
         if columns_map:

@@ -1,26 +1,23 @@
 {
     "name": "exportcsv",
     "description": "Export aggregated parquet data to a single CSV file with column selection, renaming, timezone conversion, and optional rounding",
+    "input_format": "Parquet files: `<source>__<domain>__<YYYY-MM-DD>__<window>.parquet`",
+    "output_format": "One CSV file per source device: `<source>.csv`",
     "params": {
         "aggregation": {
             "type": "str",
-            "default": "10s"
+            "default": "10s",
+            "description": "Aggregation window to select for export (must match a window produced by aggregate)"
         },
         "domain": {
             "type": "str",
-            "default": "bio_signal"
+            "default": "bio_signal",
+            "description": "Domain to export (bio_signal or environment)"
         },
         "tz": {
             "type": "str",
-            "default": "Europe/Paris"
-        },
-        "from": {
-            "type": "str",
-            "default": ""
-        },
-        "to": {
-            "type": "str",
-            "default": ""
+            "default": "Europe/Paris",
+            "description": "Timezone for timestamp conversion in the output CSV (IANA format)"
         },
         "columns": {
             "type": "dict",
@@ -37,7 +34,8 @@
                 "m9__raw__mean": {"name": "c9", "dtype": "int"},
                 "m10__raw__mean": {"name": "c10", "dtype": "int"},
                 "m11__raw__mean": {"name": "c11", "dtype": "int"}
-            }
+            },
+            "description": "Column selection and renaming: map source column name to output spec (name = export column name, dtype = int/float/str for casting)"
         }
     }
 }

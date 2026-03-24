@@ -14,6 +14,57 @@ _BUILTIN_FLOWS_ROOT = Path(__file__).resolve().parent.parent.parent / "flows"
 _META_PARAMS = {"from", "to"}
 
 
+def _print_dry_run(name: str, steps: list, time_from, time_to, last: bool) -> None:
+    import json
+    from pyperun.core.runner import resolve_treatment_dir
+    from pyperun.core.validator import load_treatment, merge_params
+
+    print(f"\n\033[1m[dry-run] Flow: {name} ({len(steps)} steps)\033[0m")
+    if last:
+        print(f"  Global filter: --last (resolved at runtime)")
+    elif time_from or time_to:
+        tf = time_from.isoformat() if time_from else "..."
+        tt = time_to.isoformat() if time_to else "..."
+        print(f"  Global filter: {tf} → {tt}")
+    print()
+
+    for i, s in enumerate(steps, 1):
+        treatment = s["treatment"]
+        step_id = _step_id(s)
+        label = treatment if step_id == treatment else f"{treatment} [{step_id}]"
+        input_dir = s.get("input", "")
+        output_dir = s.get("output", "")
+        step_time_from = s.get("_time_from", time_from)
+        step_time_to = s.get("_time_to", time_to)
+        params = s.get("params", {})
+
+        # Resolve full params including treatment defaults
+        try:
+            t_dir = resolve_treatment_dir(treatment)
+            schema = load_treatment(t_dir)
+            full_params = merge_params(schema, {k: v for k, v in params.items() if not k.startswith("__")})
+        except Exception:
+            full_params = params
+
+        print(f"  \033[1mStep {i}/{len(steps)}: {label}\033[0m")
+        print(f"    Input:   {input_dir}")
+        print(f"    Output:  {output_dir}")
+        if step_time_from or step_time_to:
+            tf = step_time_from.isoformat() if step_time_from else "..."
+            tt = step_time_to.isoformat() if step_time_to else "..."
+            marker = "  \033[33m← funnel\033[0m" if s.get("_time_from") or s.get("_time_to") else ""
+            print(f"    Filter:  {tf} → {tt}{marker}")
+        else:
+            print(f"    Filter:  all dates")
+        if full_params:
+            params_str = json.dumps(full_params, ensure_ascii=False)
+            # Truncate very long params for readability
+            if len(params_str) > 120:
+                params_str = params_str[:117] + "..."
+            print(f"    Params:  {params_str}")
+        print()
+
+
 def get_flows_root() -> Path:
     """Return the flows directory: local ./flows/ takes priority over built-ins."""
     local = Path.cwd() / "flows"
@@ -87,6 +138,7 @@ def run_flow(
     from_step: str | None = None,
     to_step: str | None = None,
     step: str | None = None,
+    dry_run: bool = False,
 ) -> None:
     flow_path = _find_flow(name)
 
@@ -117,8 +169,17 @@ def run_flow(
 
     # Resolve paths and merge params per step
     for s in steps:
-        # Merge: inherited flow params + step params (step overrides flow)
-        s["params"] = {**inherited, **s.get("params", {})}
+        step_raw = s.get("params", {})
+
+        # Extract step-level from/to for per-step file filtering (funnel)
+        if step_raw.get("from"):
+            s["_time_from"] = parse_iso_utc(step_raw["from"])
+        if step_raw.get("to"):
+            s["_time_to"] = parse_iso_utc(step_raw["to"])
+
+        # Merge: inherited flow params + step params, then strip meta-params
+        merged = {**inherited, **step_raw}
+        s["params"] = {k: v for k, v in merged.items() if k not in _META_PARAMS}
 
         if dataset:
             # Resolve relative paths to datasets/<dataset>/<path>
@@ -163,6 +224,10 @@ def run_flow(
         if time_from is not None:
             print(f"[flow] --last resolved to {time_from.isoformat()} .. {time_to.isoformat()}")
 
+    if dry_run:
+        _print_dry_run(name, steps, time_from, time_to, last)
+        return
+
     print(f"[flow] Starting '{name}' ({len(steps)} steps)")
     for i, s in enumerate(steps, 1):
         treatment = s["treatment"]
@@ -170,11 +235,15 @@ def run_flow(
         output_dir = s.get("output", "")
         params = s.get("params", {})
 
+        # Per-step time range: step-level from/to overrides flow-level (funnel)
+        step_time_from = s.get("_time_from", time_from)
+        step_time_to = s.get("_time_to", time_to)
+
         print(f"[flow] Step {i}/{len(steps)}: {treatment}")
         try:
             run_treatment(treatment, input_dir, output_dir, params,
-                          time_from=time_from, time_to=time_to,
-                          output_mode=output_mode)
+                          time_from=step_time_from, time_to=step_time_to,
+                          output_mode=output_mode, flow=name)
         except Exception as exc:
             print(f"[flow] FAILED at step {i} ({treatment}): {exc}", file=sys.stderr)
             raise SystemExit(1)

@@ -30,12 +30,6 @@ pyperun flow valvometry_daily --from-step resample
 # Incremental mode (only new data)
 pyperun flow valvometry_daily --last
 
-# Run a single treatment with explicit paths
-pyperun run parse --input datasets/PREMANIP-GRACE/00_raw --output datasets/PREMANIP-GRACE/10_parsed
-
-# Run with custom params
-pyperun run aggregate --input datasets/PREMANIP-GRACE/30_transform --output datasets/PREMANIP-GRACE/40_aggregated --params '{"windows": ["30s", "5min"], "metrics": ["mean", "median"]}'
-
 # Show status of all datasets
 pyperun status
 
@@ -114,6 +108,13 @@ Declarative format: `input`/`output` explicit per step, `params` at flow level f
 ```
 
 Paths are relative to `datasets/<dataset>/` when `dataset` is set, or absolute otherwise.
+
+The optional `name` field on a step overrides its identifier (used by `--step`, `--from-step`, `--to-step`). Required when the same treatment appears multiple times in a flow with different params:
+
+```json
+{"treatment": "exportcsv", "name": "exportcsv_10s", ...},
+{"treatment": "exportcsv", "name": "exportcsv_1s",  ...}
+```
 
 **Params hierarchy** (lowest → highest priority): `treatment.json defaults` → `flow.params` → `step.params` → `CLI`
 

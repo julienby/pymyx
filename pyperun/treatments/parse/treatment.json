@@ -1,33 +1,41 @@
 {
     "name": "parse",
     "description": "Parse raw CSV files into typed parquet files partitioned by domain and day",
+    "input_format": "Raw CSV files (key:value, no header). Example row: `2026-01-20T09:07:58Z;m0:10;m1:12;outdoor_temp:18.94`",
+    "output_format": "Parquet files per domain and day: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
     "params": {
         "format": {
             "type": "str",
-            "default": "kv_csv"
+            "default": "kv_csv",
+            "description": "Input file format (kv_csv: semicolon-separated key:value pairs)"
         },
         "delimiter": {
             "type": "str",
-            "default": ";"
+            "default": ";",
+            "description": "Field delimiter between key:value pairs in each row"
         },
         "tz": {
             "type": "str",
-            "default": "UTC"
+            "default": "UTC",
+            "description": "Timezone of timestamps in raw files (IANA format, e.g. Europe/Paris)"
         },
         "timestamp_column": {
             "type": "str",
-            "default": "ts"
+            "default": "ts",
+            "description": "Name of the timestamp column in parsed output"
         },
         "domains": {
             "type": "dict",
             "default": {
                 "bio_signal": {"prefix": "m", "dtype": "int"},
                 "environment": {"columns": ["outdoor_temp"], "dtype": "float"}
-            }
+            },
+            "description": "Domain definitions: map domain name to column selection (prefix or explicit list) and dtype"
         },
         "file_name_substitute": {
             "type": "list",
-            "default": []
+            "default": [],
+            "description": "List of [pattern, replacement] pairs to normalize source filenames before parsing"
         }
     }
 }

@@ -1,10 +1,13 @@
 {
     "name": "clean",
     "description": "Drop duplicates, enforce min/max bounds, remove physically impossible spikes",
+    "input_format": "Parquet files: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
+    "output_format": "Parquet files with bad rows removed: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
     "params": {
         "drop_duplicates": {
             "type": "bool",
-            "default": true
+            "default": true,
+            "description": "Drop rows with duplicate timestamps within each domain file"
         },
         "domains": {
             "type": "dict",
@@ -21,7 +24,8 @@
                     "spike_window": 7,
                     "spike_threshold": 5.0
                 }
-            }
+            },
+            "description": "Per-domain cleaning rules: min_value/max_value bounds (rows outside are dropped), spike_window (rolling window size), spike_threshold (max deviation from rolling median)"
         }
     }
 }

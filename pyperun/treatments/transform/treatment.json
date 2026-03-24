@@ -1,6 +1,8 @@
 {
     "name": "transform",
     "description": "Apply mathematical transformations to selected columns",
+    "input_format": "Parquet files: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
+    "output_format": "Parquet files with added or replaced columns: `<source>__<domain>__<YYYY-MM-DD>.parquet`",
     "params": {
         "transforms": {
             "type": "list",
@@ -10,7 +12,8 @@
                     "target": {"domain": "bio_signal"},
                     "mode": "add"
                 }
-            ]
+            ],
+            "description": "List of transform specs. Each entry: function (cbrt_inv, sqrt_inv, log, identity), target (domain and optional columns list), mode (add = new column, replace = overwrite)"
         }
     }
 }

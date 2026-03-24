@@ -1,0 +1,181 @@
+{
+    "name": "premanip-grace",
+    "description": "Pipeline for dataset PREMANIP-GRACE",
+    "dataset": "PREMANIP-GRACE",
+    "params": {},
+    "steps": [
+        {
+            "treatment": "parse",
+            "input": "00_raw",
+            "output": "10_parsed",
+            "params": {
+                "format": "kv_csv",
+                "delimiter": ";",
+                "tz": "UTC",
+                "timestamp_column": "ts",
+                "domains": {
+                    "bio_signal": {
+                        "prefix": "m",
+                        "dtype": "int"
+                    },
+                    "environment": {
+                        "columns": [
+                            "outdoor_temp"
+                        ],
+                        "dtype": "float"
+                    }
+                },
+                "file_name_substitute": [
+                    {"src": "PREMANIP_GRACE", "target": "PREMANIP-GRACE"},
+                    {"src": "premanip_grace", "target": "PREMANIP-GRACE"}
+                ]
+            }
+        },
+        {
+            "treatment": "clean",
+            "input": "10_parsed",
+            "output": "20_clean",
+            "params": {
+                "drop_duplicates": true,
+                "domains": {
+                    "bio_signal": {
+                        "min_value": 0,
+                        "max_value": 800,
+                        "spike_window": 10,
+                        "spike_threshold": 100
+                    },
+                    "environment": {
+                        "min_value": -10.0,
+                        "max_value": 50.0,
+                        "spike_window": 7,
+                        "spike_threshold": 5.0
+                    }
+                }
+            }
+        },
+        {
+            "treatment": "resample",
+            "input": "20_clean",
+            "output": "25_resampled",
+            "params": {
+                "freq": "1s",
+                "max_gap_fill_s": 20,
+                "agg_method": {
+                    "bio_signal": "nearest",
+                    "environment": "mean"
+                }
+            }
+        },
+        {
+            "treatment": "transform",
+            "input": "25_resampled",
+            "output": "30_transform",
+            "params": {
+                "transforms": [
+                    {
+                        "function": "cbrt_inv",
+                        "target": {
+                            "domain": "bio_signal"
+                        },
+                        "mode": "add"
+                    }
+                ]
+            }
+        },
+        {
+            "treatment": "normalize",
+            "input": "30_transform",
+            "output": "35_normalized",
+            "params": {
+                "fit": false,
+                "method": "percentile",
+                "percentile_min": 2.0,
+                "percentile_max": 98.0,
+                "domain": "bio_signal",
+                "columns": [],
+                "clip": true,
+                "fit_window_days": 0,
+                "min_range_warn": 0.0
+            }
+        },
+        {
+            "treatment": "aggregate",
+            "input": "35_normalized",
+            "output": "40_aggregated",
+            "params": {
+                "windows": [
+                    "1s",
+                    "10s",
+                    "60s",
+                    "5min",
+                    "1h"
+                ],
+                "metrics": [
+                    "mean",
+                    "std"
+                ],
+                "decimals": -1
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "input": "40_aggregated",
+            "output": "61_exportcsv",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__raw__mean": {
+                        "name": "c0",
+                        "dtype": "int"
+                    },
+                    "m1__raw__mean": {
+                        "name": "c1",
+                        "dtype": "int"
+                    },
+                    "m2__raw__mean": {
+                        "name": "c2",
+                        "dtype": "int"
+                    },
+                    "m3__raw__mean": {
+                        "name": "c3",
+                        "dtype": "int"
+                    },
+                    "m4__raw__mean": {
+                        "name": "c4",
+                        "dtype": "int"
+                    },
+                    "m5__raw__mean": {
+                        "name": "c5",
+                        "dtype": "int"
+                    },
+                    "m6__raw__mean": {
+                        "name": "c6",
+                        "dtype": "int"
+                    },
+                    "m7__raw__mean": {
+                        "name": "c7",
+                        "dtype": "int"
+                    },
+                    "m8__raw__mean": {
+                        "name": "c8",
+                        "dtype": "int"
+                    },
+                    "m9__raw__mean": {
+                        "name": "c9",
+                        "dtype": "int"
+                    },
+                    "m10__raw__mean": {
+                        "name": "c10",
+                        "dtype": "int"
+                    },
+                    "m11__raw__mean": {
+                        "name": "c11",
+                        "dtype": "int"
+                    }
+                }
+            }
+        }
+    ]
+}

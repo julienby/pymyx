@@ -14,8 +14,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     aggregation = params["aggregation"]
     domain = params["domain"]
     tz = params["tz"]
-    date_from = params.get("from")
-    date_to = params.get("to")
     columns_raw = params["columns"]
     # Support both str and dict values: {"name": "c0", "dtype": "int"} or "c0"
     col_names = {src: (v["name"] if isinstance(v, dict) else v) for src, v in columns_raw.items()}
@@ -32,10 +30,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         if parts.domain != domain:
             continue
         if parts.aggregation != aggregation:
-            continue
-        if date_from and parts.day < date_from:
-            continue
-        if date_to and parts.day > date_to:
             continue
         by_device[parts.device_id].append(pf)
         if experience is None:
@@ -61,12 +55,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
         merged = pd.concat(frames, ignore_index=True)
         merged = merged.sort_values("ts").reset_index(drop=True)
-
-        # Filter by from/to on actual timestamps
-        if date_from:
-            merged = merged[merged["ts"] >= pd.Timestamp(date_from, tz="UTC")]
-        if date_to:
-            merged = merged[merged["ts"] < pd.Timestamp(date_to, tz="UTC") + pd.Timedelta(days=1)]
 
         # Select only columns that exist (warn about missing ones)
         missing = [c for c in col_names if c not in merged.columns]
