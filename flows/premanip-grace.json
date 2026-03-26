@@ -1,7 +1,7 @@
 {
     "name": "premanip-grace",
-    "description": "Pipeline for dataset PREMANIP-GRACE",
-    "dataset": "PREMANIP-GRACE",
+    "description": "PREMANIP-GRACE pipeline: parse -> clean -> resample -> transform -> normalize -> aggregate -> exportcsv/exportparquet (valvométrie m0..m11, 12 capteurs + outdoor_temp)",
+    "dataset": "PREMANIP_GRACE",
     "params": {},
     "steps": [
         {
@@ -19,9 +19,7 @@
                         "dtype": "int"
                     },
                     "environment": {
-                        "columns": [
-                            "outdoor_temp"
-                        ],
+                        "columns": ["outdoor_temp"],
                         "dtype": "float"
                     }
                 },
@@ -40,15 +38,11 @@
                 "domains": {
                     "bio_signal": {
                         "min_value": 0,
-                        "max_value": 800,
-                        "spike_window": 10,
-                        "spike_threshold": 100
+                        "max_value": 800
                     },
                     "environment": {
                         "min_value": -10.0,
-                        "max_value": 50.0,
-                        "spike_window": 7,
-                        "spike_threshold": 5.0
+                        "max_value": 50.0
                     }
                 }
             }
@@ -74,106 +68,122 @@
                 "transforms": [
                     {
                         "function": "cbrt_inv",
-                        "target": {
-                            "domain": "bio_signal"
-                        },
+                        "target": {"domain": "bio_signal"},
+                        "mode": "add"
+                    },
+                    {
+                        "function": "sqrt_inv",
+                        "target": {"domain": "bio_signal"},
                         "mode": "add"
                     }
                 ]
             }
-        },
-        {
-            "treatment": "normalize",
-            "input": "30_transform",
-            "output": "35_normalized",
-            "params": {
-                "fit": false,
-                "method": "percentile",
-                "percentile_min": 2.0,
-                "percentile_max": 98.0,
-                "domain": "bio_signal",
-                "columns": [],
-                "clip": true,
-                "fit_window_days": 0,
-                "min_range_warn": 0.0
-            }
-        },
+        },        
         {
             "treatment": "aggregate",
             "input": "35_normalized",
             "output": "40_aggregated",
             "params": {
-                "windows": [
-                    "1s",
-                    "10s",
-                    "60s",
-                    "5min",
-                    "1h"
-                ],
-                "metrics": [
-                    "mean",
-                    "std"
-                ],
+                "windows": ["1s", "10s", "60s", "5min", "10min"],
+                "metrics": ["median"],
                 "decimals": -1
             }
         },
         {
             "treatment": "exportcsv",
+            "name": "exportcsv_10s",
             "input": "40_aggregated",
-            "output": "61_exportcsv",
+            "output": "61_exportcsv_nour",
             "params": {
                 "aggregation": "10s",
                 "domain": "bio_signal",
                 "tz": "Europe/Paris",
                 "columns": {
-                    "m0__raw__mean": {
-                        "name": "c0",
-                        "dtype": "int"
-                    },
-                    "m1__raw__mean": {
-                        "name": "c1",
-                        "dtype": "int"
-                    },
-                    "m2__raw__mean": {
-                        "name": "c2",
-                        "dtype": "int"
-                    },
-                    "m3__raw__mean": {
-                        "name": "c3",
-                        "dtype": "int"
-                    },
-                    "m4__raw__mean": {
-                        "name": "c4",
-                        "dtype": "int"
-                    },
-                    "m5__raw__mean": {
-                        "name": "c5",
-                        "dtype": "int"
-                    },
-                    "m6__raw__mean": {
-                        "name": "c6",
-                        "dtype": "int"
-                    },
-                    "m7__raw__mean": {
-                        "name": "c7",
-                        "dtype": "int"
-                    },
-                    "m8__raw__mean": {
-                        "name": "c8",
-                        "dtype": "int"
-                    },
-                    "m9__raw__mean": {
-                        "name": "c9",
-                        "dtype": "int"
-                    },
-                    "m10__raw__mean": {
-                        "name": "c10",
-                        "dtype": "int"
-                    },
-                    "m11__raw__mean": {
-                        "name": "c11",
-                        "dtype": "int"
-                    }
+                    "m0__raw__median": {"name": "c0", "dtype": "int"},
+                    "m1__raw__median": {"name": "c1", "dtype": "int"},
+                    "m2__raw__median": {"name": "c2", "dtype": "int"},
+                    "m3__raw__median": {"name": "c3", "dtype": "int"},
+                    "m4__raw__median": {"name": "c4", "dtype": "int"},
+                    "m5__raw__median": {"name": "c5", "dtype": "int"},
+                    "m6__raw__median": {"name": "c6", "dtype": "int"},
+                    "m7__raw__median": {"name": "c7", "dtype": "int"},
+                    "m8__raw__median": {"name": "c8", "dtype": "int"},
+                    "m9__raw__median": {"name": "c9", "dtype": "int"},
+                    "m10__raw__median": {"name": "c10", "dtype": "int"},
+                    "m11__raw__median": {"name": "c11", "dtype": "int"}
+                }
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "name": "exportcsv_1s",
+            "input": "40_aggregated",
+            "output": "61_exportcsv_nour",
+            "params": {
+                "aggregation": "1s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "columns": {
+                    "m0__raw__median": {"name": "c0", "dtype": "int"},
+                    "m1__raw__median": {"name": "c1", "dtype": "int"},
+                    "m2__raw__median": {"name": "c2", "dtype": "int"},
+                    "m3__raw__median": {"name": "c3", "dtype": "int"},
+                    "m4__raw__median": {"name": "c4", "dtype": "int"},
+                    "m5__raw__median": {"name": "c5", "dtype": "int"},
+                    "m6__raw__median": {"name": "c6", "dtype": "int"},
+                    "m7__raw__median": {"name": "c7", "dtype": "int"},
+                    "m8__raw__median": {"name": "c8", "dtype": "int"},
+                    "m9__raw__median": {"name": "c9", "dtype": "int"},
+                    "m10__raw__median": {"name": "c10", "dtype": "int"},
+                    "m11__raw__median": {"name": "c11", "dtype": "int"}
+                }
+            }
+        },
+        {
+            "treatment": "exportparquet",
+            "name": "exportparquet_10s",
+            "input": "40_aggregated",
+            "output": "62_exportparquet",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "columns": {
+                    "m0__raw__median": "c0",
+                    "m1__raw__median": "c1",
+                    "m2__raw__median": "c2",
+                    "m3__raw__median": "c3",
+                    "m4__raw__median": "c4",
+                    "m5__raw__median": "c5",
+                    "m6__raw__median": "c6",
+                    "m7__raw__median": "c7",
+                    "m8__raw__median": "c8",
+                    "m9__raw__median": "c9",
+                    "m10__raw__median": "c10",
+                    "m11__raw__median": "c11"
+                }
+            }
+        },
+        {
+            "treatment": "exportparquet",
+            "name": "exportparquet_60s",
+            "input": "40_aggregated",
+            "output": "62_exportparquet",
+            "params": {
+                "aggregation": "60s",
+                "domain": "bio_signal",
+                "columns": {
+                    "m0__raw__median": "c0",
+                    "m1__raw__mean": "c1",
+                    "m2__raw__median": "c2",
+                    "m3__raw__median": "c3",
+                    "m4__raw__median": "c4",
+                    "m5__raw__median": "c5",
+                    "m6__raw__median": "c6",
+                    "m7__raw__median": "c7",
+                    "m8__raw__median": "c8",
+                    "m9__raw__median": "c9",
+                    "m10__raw__median": "c10",
+                    "m11__raw__median": "c11"
                 }
             }
         }

@@ -14,6 +14,8 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
     aggregation = params["aggregation"]
     domain = params["domain"]
     tz = params["tz"]
+    from_dt = pd.Timestamp(params["from"], tz="UTC") if params.get("from") else None
+    to_dt = pd.Timestamp(params["to"], tz="UTC") if params.get("to") else None
     columns_raw = params["columns"]
     # Support both str and dict values: {"name": "c0", "dtype": "int"} or "c0"
     col_names = {src: (v["name"] if isinstance(v, dict) else v) for src, v in columns_raw.items()}
@@ -55,6 +57,15 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
         merged = pd.concat(frames, ignore_index=True)
         merged = merged.sort_values("ts").reset_index(drop=True)
+
+        if from_dt is not None:
+            merged = merged[merged["ts"] >= from_dt]
+        if to_dt is not None:
+            merged = merged[merged["ts"] < to_dt]
+
+        if merged.empty:
+            print(f"  [exportcsv] {device_id}: no data in range, skipping")
+            continue
 
         # Select only columns that exist (warn about missing ones)
         missing = [c for c in col_names if c not in merged.columns]

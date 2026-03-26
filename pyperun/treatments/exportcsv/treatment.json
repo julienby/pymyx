@@ -19,6 +19,16 @@
             "default": "Europe/Paris",
             "description": "Timezone for timestamp conversion in the output CSV (IANA format)"
         },
+        "from": {
+            "type": "str",
+            "default": null,
+            "description": "Start datetime for filtering (ISO 8601, e.g. 2026-03-01T00:00:00Z). Inclusive. If null, no lower bound."
+        },
+        "to": {
+            "type": "str",
+            "default": null,
+            "description": "End datetime for filtering (ISO 8601, e.g. 2026-03-10T00:00:00Z). Exclusive. If null, no upper bound."
+        },
         "columns": {
             "type": "dict",
             "default": {
