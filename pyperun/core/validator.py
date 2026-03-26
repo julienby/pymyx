@@ -7,9 +7,14 @@ from typing import Any
 from pydantic import BaseModel, field_validator
 
 
+_MISSING = object()
+
+
 class ParamSchema(BaseModel):
     type: str
-    default: Any = None
+    default: Any = _MISSING
+
+    model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("type")
     @classmethod
@@ -43,10 +48,13 @@ def merge_params(schema: TreatmentSchema, provided: dict[str, Any]) -> dict[str,
     for name, param in schema.params.items():
         if name in provided:
             val = provided[name]
-        elif param.default is not None:
+        elif param.default is not _MISSING:
             val = param.default
         else:
             raise ValueError(f"Missing required param '{name}' (no default)")
+        if val is None:
+            merged[name] = None
+            continue
         expected = TYPE_MAP[param.type]
         if not isinstance(val, expected):
             raise TypeError(f"Param '{name}' expected {param.type}, got {type(val).__name__}")

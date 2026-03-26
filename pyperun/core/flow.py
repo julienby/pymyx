@@ -177,9 +177,12 @@ def run_flow(
         if step_raw.get("to"):
             s["_time_to"] = parse_iso_utc(step_raw["to"])
 
-        # Merge: inherited flow params + step params, then strip meta-params
+        # Merge: inherited flow params + step params
+        # Strip meta-params (from/to) from flow-level inherited params,
+        # but keep step-level from/to so treatments can use them for row filtering
         merged = {**inherited, **step_raw}
-        s["params"] = {k: v for k, v in merged.items() if k not in _META_PARAMS}
+        flow_meta = _META_PARAMS - set(step_raw.keys())
+        s["params"] = {k: v for k, v in merged.items() if k not in flow_meta}
 
         if dataset:
             # Resolve relative paths to datasets/<dataset>/<path>
