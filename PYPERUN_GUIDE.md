@@ -366,12 +366,14 @@ Each entry in `sources` supports the following optional filters. Multiple entrie
         "domain": "bio_signal",
         "devices": ["pil-78"],
         "sensors": ["m0", "m1"],
+        "transforms": ["raw", "cbrt_inv"],
         "metrics": ["mean", "std"]
     },
     {
         "domain": "bio_signal",
         "devices": ["pil-79"],
         "sensors": ["m*"],
+        "transforms": ["raw"],
         "metrics": ["mean"]
     }
 ]
