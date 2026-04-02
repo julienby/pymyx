@@ -42,7 +42,7 @@
         "mode": {
             "type": "str",
             "default": "append",
-            "description": "Write mode: append (insert new rows) or replace (drop and recreate table)"
+            "description": "Write mode: append (insert new rows only), replace (truncate data, keep schema), reset (drop and recreate table from scratch)"
         },
         "aggregations": {
             "type": "list",
@@ -55,7 +55,7 @@
                 {"domain": "bio_signal"},
                 {"domain": "environment"}
             ],
-            "description": "List of domain sources to export. Each entry: domain (required), columns (optional list to filter)"
+            "description": "List of domain sources to export. Each entry: domain (required), then optional filters: devices (list of device ids, e.g. [\"pil-78\"]), sensors (list of sensor names or patterns, e.g. [\"m*\", \"outdoor_temp\"]), transforms (list of transform names or patterns), metrics (list of metric names or patterns, e.g. [\"mean\", \"std\"]), columns (explicit list of full column names, takes priority over sensors/transforms/metrics). Wildcards (fnmatch) supported in sensors/transforms/metrics."
         }
     }
 }

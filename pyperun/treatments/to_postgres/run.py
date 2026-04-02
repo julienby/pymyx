@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import io
 import re
 from collections import defaultdict
@@ -86,18 +87,34 @@ def _matches_structured_filter(col: str, allowed) -> bool:
 
     Column format: {sensor}__{transform}__{metric}
     allowed is a set of (sensor|None, transform|None, metric|None) tuples.
-    None in a position means 'match anything'.
+    None in a position means 'match anything'. Strings support fnmatch wildcards (e.g. 'm*').
     """
     parts = col.split("__")
     if len(parts) != 3:
         return False
     sensor, transform, metric = parts
     for pattern in allowed:
-        if ((pattern[0] is None or pattern[0] == sensor)
-                and (pattern[1] is None or pattern[1] == transform)
-                and (pattern[2] is None or pattern[2] == metric)):
+        if ((pattern[0] is None or fnmatch.fnmatch(sensor, pattern[0]))
+                and (pattern[1] is None or fnmatch.fnmatch(transform, pattern[1]))
+                and (pattern[2] is None or fnmatch.fnmatch(metric, pattern[2]))):
             return True
     return False
+
+
+def _find_source(sources: list[dict], domain: str, device_id: str) -> dict | None:
+    """Find the first source entry matching domain and device_id.
+
+    Supports multiple entries with the same domain (for per-device column filters).
+    A source with no 'devices' list matches any device.
+    """
+    for s in sources:
+        if s["domain"] != domain:
+            continue
+        devices = s.get("devices")
+        if devices and device_id not in devices:
+            continue
+        return s
+    return None
 
 
 def _pivot_wide(
@@ -107,26 +124,19 @@ def _pivot_wide(
 
     Args:
         files: list of parquet file paths (all same experience/step/aggregation/day)
-        sources: list of source specs, e.g. [{"domain": "bio_signal"}, {"domain": "environment", "columns": ["outdoor_temp_mean"]}]
+        sources: list of source specs. Multiple entries with the same domain are
+            allowed to apply different filters per device.
 
     Returns:
         A single wide DataFrame with ts + prefixed columns from all devices/domains.
     """
-    source_map = {s["domain"]: s for s in sources}
     frames = []
 
     for f in files:
         parts = parse_parquet_path(f)
 
-        # Filter by domain
-        if parts.domain not in source_map:
-            continue
-
-        source = source_map[parts.domain]
-
-        # Filter by device
-        devices = source.get("devices")
-        if devices and parts.device_id not in devices:
+        source = _find_source(sources, parts.domain, parts.device_id)
+        if source is None:
             continue
 
         df = pd.read_parquet(f)
@@ -284,11 +294,15 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
             )
             print(f"  [to_postgres] Table: {table_name} ({len(days)} days)")
 
-            # Mode replace: truncate once per table
-            if mode == "replace" and table_name not in truncated_tables:
+            # Mode replace: truncate once per table (keeps schema)
+            # Mode reset: drop once per table (recreates schema from scratch)
+            if mode in ("replace", "reset") and table_name not in truncated_tables:
                 try:
                     with conn.cursor() as cur:
-                        cur.execute(f'TRUNCATE TABLE "{table_name}"')
+                        if mode == "reset":
+                            cur.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+                        else:
+                            cur.execute(f'TRUNCATE TABLE "{table_name}"')
                     conn.commit()
                 except psycopg2.errors.UndefinedTable:
                     conn.rollback()
