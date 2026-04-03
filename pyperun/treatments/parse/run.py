@@ -96,7 +96,7 @@ def parse_kv_csv(csv_file: Path, delimiter: str, ts_col: str, tz: str) -> pd.Dat
     rows = []
     with open(csv_file) as f:
         for line in f:
-            line = line.strip()
+            line = line.replace('\x00', '').strip()
             if not line:
                 continue
             parts = line.split(delimiter)
@@ -113,7 +113,7 @@ def parse_kv_csv(csv_file: Path, delimiter: str, ts_col: str, tz: str) -> pd.Dat
         return pd.DataFrame()
 
     df = pd.DataFrame(rows)
-    df["ts"] = pd.to_datetime(df["ts"], format="ISO8601", utc=(tz == "UTC"))
+    df["ts"] = pd.to_datetime(df["ts"], format="mixed", utc=(tz == "UTC"))
     return df
 
 
