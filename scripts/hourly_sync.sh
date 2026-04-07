@@ -14,7 +14,7 @@ set -euo pipefail
 
 PYPERUN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOGFILE="${PYPERUN_ROOT}/pyperun_hourly.log"
-FLOW="valvometry_daily"
+FLOW="${1:-my-flow}"  # Pass flow name as argument or set here
 
 cd "$PYPERUN_ROOT"
 

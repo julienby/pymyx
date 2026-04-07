@@ -186,10 +186,12 @@ To override a built-in, create a treatment with the same name in `./treatments/`
 | 1 | `parse` | 00_raw -> 10_parsed | Parse key:value CSV into typed parquet, split by domain and day |
 | 2 | `clean` | 10_parsed -> 20_clean | Drop duplicates, enforce min/max bounds, remove spikes (rolling median) |
 | 3 | `resample` | 20_clean -> 25_resampled | Regular 1s grid, floor to second, forward-fill small gaps (<=2s) |
-| 4 | `transform` | 25_resampled -> 30_transform | Apply mathematical transformations (sqrt_inv, log) to selected columns |
-| 5 | `aggregate` | 30_transform -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics |
-| 6 | `to_postgres` | 40_aggregated -> PostgreSQL | Export to PostgreSQL wide tables (for Grafana) |
-| 7 | `exportcsv` | 40_aggregated -> 61_exportcsv | Export to CSV per device, with column renaming and timezone conversion |
+| 4 | `transform` | 25_resampled -> 30_transform | Apply mathematical transformations (sqrt_inv, cbrt_inv, log) to selected columns |
+| 5 | `normalize` | 30_transform -> 35_normalized | Min-max normalization of selected columns (optional) |
+| 6 | `aggregate` | 30_transform (or 35_normalized) -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics |
+| 7 | `to_postgres` | 40_aggregated -> PostgreSQL | Export to PostgreSQL wide tables (for Grafana) |
+| 8 | `exportcsv` | 40_aggregated -> 61_exportcsv | Export to CSV per device, with column renaming and timezone conversion |
+| 8 | `exportparquet` | 40_aggregated -> 62_exportparquet | Export selected aggregation windows to parquet files |
 
 ## Flow format
 
@@ -335,12 +337,17 @@ pyperun/
     clean/
     resample/
     transform/
+    normalize/
     aggregate/
     to_postgres/
     exportcsv/
+    exportparquet/
 tests/
 scripts/
   hourly_sync.sh            # Cron script for incremental processing
+  run_scheduled_flows.sh    # Run all flows listed in scheduled_flows.txt
+  run_flow_hourly.sh        # Run a single flow on a loop
+  update.sh                 # Pull latest code and reinstall
 ```
 
 ### Your project repo

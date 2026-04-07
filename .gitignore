@@ -12,6 +12,10 @@ build/
 # Logs
 *.log
 
+# Internal / AI guides
+doc/
+PYPERUN_GUIDE.md
+
 # Exploration / comparaison (hors projet)
 comparaison/
 
