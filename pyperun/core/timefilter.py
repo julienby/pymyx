@@ -124,14 +124,17 @@ def resolve_last_range(
         # First run — process everything
         return None, None
 
-    # When input has no parquet (CSV only), compare by file dates to avoid
-    # false deltas from the 23:59:59 fallback
+    # When input has no parquet (CSV only), the 23:59:59 filename fallback is
+    # imprecise: intra-day updates won't change the date but do add new data.
+    # Use the mtime of the most recent input file as a precise last_input.
     has_parquet_input = any(input_dir.rglob("*.parquet"))
     if not has_parquet_input:
-        input_date = _last_file_date(input_dir)
-        output_date = _last_file_date(output_dir)
-        if input_date and output_date and output_date >= input_date:
-            raise ValueError("already up-to-date")
+        last_input_mtime = max(
+            (f.stat().st_mtime for f in input_dir.rglob("*") if f.is_file()),
+            default=None,
+        )
+        if last_input_mtime is not None:
+            last_input = datetime.fromtimestamp(last_input_mtime, tz=timezone.utc)
 
     if last_output >= last_input:
         raise ValueError("already up-to-date")
