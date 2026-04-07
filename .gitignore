@@ -15,6 +15,7 @@ logs/
 
 # Internal / AI guides
 doc/
+CLAUDE.md
 PYPERUN_GUIDE.md
 
 # Exploration / comparaison (hors projet)
