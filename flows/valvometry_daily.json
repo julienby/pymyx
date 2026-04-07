@@ -56,10 +56,10 @@
             "input": "40_aggregated",
             "output": "60_postgres",
             "params": {
-                "host": "pil-86",
-                "dbname": "icaging",
-                "user": "icaging",
-                "password": "icaging",
+                "host": "your-host",
+                "dbname": "your-db",
+                "user": "your-user",
+                "password": "your-password",
                 "table_prefix": "BETA_",
                 "table_template": "PREMANIP_GRACE__AGGREGATED__{aggregation}"
             }

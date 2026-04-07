@@ -1,0 +1,160 @@
+{
+    "name": "expo1-reims26_init",
+    "description": "Initial pipeline for EXPO1-REIMS26 — run once on historical data.",
+    "dataset": "EXPO1-REIMS26",
+    "params": {
+        "from": "2026-03-08T00:00:00Z"
+    },
+    "steps": [
+        {
+            "treatment": "parse",
+            "input": "00_raw",
+            "output": "10_parsed",
+            "params": {
+                "format": "kv_csv",
+                "delimiter": ";",
+                "tz": "UTC",
+                "timestamp_column": "ts",
+                "domains": {
+                    "bio_signal": {
+                        "prefix": "m",
+                        "dtype": "int"
+                    }
+                },
+                "file_name_substitute": []
+            }
+        },
+        {
+            "treatment": "clean",
+            "input": "10_parsed",
+            "output": "20_clean",
+            "params": {
+                "drop_duplicates": true,
+                "domains": {
+                    "bio_signal": {
+                        "min_value": 0,
+                        "max_value": 800,
+                        "spike_window": 10,
+                        "spike_threshold": 100
+                    }
+                }
+            }
+        },
+        {
+            "treatment": "resample",
+            "input": "20_clean",
+            "output": "25_resampled",
+            "params": {
+                "freq": "1s",
+                "max_gap_fill_s": 20,
+                "agg_method": {
+                    "bio_signal": "nearest"
+                }
+            }
+        },
+        {
+            "treatment": "transform",
+            "input": "25_resampled",
+            "output": "30_transform",
+            "params": {
+                "transforms": [
+                    {
+                        "function": "cbrt_inv",
+                        "target": {
+                            "domain": "bio_signal"
+                        },
+                        "mode": "add"
+                    }
+                ]
+            }
+        },
+        {
+            "treatment": "aggregate",
+            "input": "30_transform",
+            "output": "40_aggregated",
+            "params": {
+                "windows": [
+                    "1s",
+                    "10s",
+                    "60s",
+                    "5min",
+                    "1h"
+                ],
+                "metrics": [
+                    "median"
+                ],
+                "decimals": -1
+            }
+        },
+        {
+            "treatment": "to_postgres",
+            "input": "40_aggregated",
+            "output": "60_postgres",
+            "params": {
+                "host": "your-host",
+                "port": 5432,
+                "dbname": "your-db",
+                "user": "your-user",
+                "password": "your-password",
+                "table_prefix": "PROD_",
+                "table_template": "{experience}__{step}__{aggregation}",
+                "mode": "reset",
+                "aggregations": ["10s", "60s", "5min"],
+                "sources": [
+                    {
+                        "domain": "bio_signal",
+                        "transforms": ["raw"],
+                        "metrics": ["median"]
+                    }
+                ]
+            }
+        },
+        {
+            "treatment": "exportcsv",
+            "name": "exportcsv_10s",
+            "input": "40_aggregated",
+            "output": "61_exportcsv_10s",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "tz": "Europe/Paris",
+                "from": null,
+                "to": null,
+                "columns": {
+                    "m0__raw__median": "c0",
+                    "m1__raw__median": "c1",
+                    "m2__raw__median": "c2",
+                    "m3__raw__median": "c3",
+                    "m4__raw__median": "c4",
+                    "m5__raw__median": "c5",
+                    "m6__raw__median": "c6",
+                    "m7__raw__median": "c7",
+                    "m8__raw__median": "c8",
+                    "m9__raw__median": "c9",
+                    "m10__raw__median": "c10",
+                    "m11__raw__median": "c11"
+                }
+            }
+        },
+        {
+            "treatment": "exportparquet",
+            "input": "40_aggregated",
+            "output": "62_exportparquet_10s",
+            "params": {
+                "aggregation": "10s",
+                "domain": "bio_signal",
+                "columns": {}
+            }
+        },
+        {
+            "treatment": "exportparquet",
+            "input": "40_aggregated",
+            "output": "62_exportparquet_60s",
+            "params": {
+                "aggregation": "60s",
+                "domain": "bio_signal",
+                "columns": {}
+            }
+        }
+    ]
+}

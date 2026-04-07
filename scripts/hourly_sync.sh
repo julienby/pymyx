@@ -6,7 +6,7 @@
 #
 # Install in crontab:
 #   crontab -e
-#   0 * * * * /home/jbaudry/Documents/2026/CLAUDE/PYPERUN/scripts/hourly_sync.sh >> /var/log/pyperun_hourly.log 2>&1
+#   0 * * * * /path/to/pyperun/scripts/hourly_sync.sh >> /var/log/pyperun_hourly.log 2>&1
 #
 # Or with systemd timer (see hourly_sync.service / hourly_sync.timer)
 
