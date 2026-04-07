@@ -1,201 +1,140 @@
 # Pyperun
 
-Minimal IoT time-series data processing pipeline for valvometric data.
-
-Raw sensor CSV files (key:value format) go through a 7-step pipeline to produce aggregated parquet files, PostgreSQL exports, and CSV exports.
+> Minimal IoT time-series pipeline — from raw sensor CSV to aggregated parquet, PostgreSQL, and CSV exports.
 
 ```
-CSV bruts  -->  parse --> clean --> resample --> transform --> aggregate --> to_postgres
-                                                                        --> exportcsv (CSV)
+  raw CSV
+     │
+     ▼
+  ┌─────────┐   ┌───────┐   ┌──────────┐   ┌───────────┐   ┌───────────┐
+  │  parse  │──▶│ clean │──▶│ resample │──▶│ transform │──▶│ aggregate │──┐
+  └─────────┘   └───────┘   └──────────┘   └───────────┘   └───────────┘  │
+                                                                            │
+                                                              ┌─────────────┼──────────────┐
+                                                              ▼             ▼              ▼
+                                                         to_postgres   exportcsv   exportparquet
+                                                         (Grafana)      (CSV)       (parquet)
 ```
 
-Pyperun is designed as a **framework**: you install it once and use it as a black box. Your experiment lives in a separate project directory containing only your flows, params, datasets, and optional custom treatments.
+Pyperun is a **framework**: install it once, then describe your experiment as a **flow** — a plain JSON file that sequences treatments, maps directories, and sets parameters. No code to write for standard pipelines.
+
+---
 
 ## Installation
 
 ```bash
-git clone <url-du-repo> ~/pyperun
+git clone https://github.com/julienby/pyperun ~/pyperun
 cd ~/pyperun
-
-# Installer les dependances et la commande pyperun
 pip install -e .
+```
 
-# Avec les outils de dev (pytest, ruff)
+```bash
+# With dev tools (pytest, ruff)
 pip install -e ".[dev]"
 ```
 
-> **setuptools trop ancien ?** Si `pip install -e .` echoue avec `build_editable hook missing` :
-> `pip install --user --upgrade pip setuptools` puis relancer.
-
-> **`pyperun` not found ?** Ajouter `~/.local/bin` au PATH :
+> **`pyperun` not found?** Add `~/.local/bin` to your PATH:
 > ```bash
-> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-> source ~/.bashrc
+> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 > ```
 
-**Important** : toutes les commandes `pyperun` doivent etre lancees depuis le repertoire du projet (celui qui contient `flows/` et `datasets/`). Le mode editable (`-e`) est recommande pour le dev comme pour la prod.
+> **setuptools too old?** Run `pip install --upgrade pip setuptools` then retry.
 
-Verify:
+All `pyperun` commands must be run from your **project directory** (the one containing `flows/` and `datasets/`).
 
-```bash
-pyperun --help
-pyperun list flows
-pyperun list treatments
-```
+---
 
 ## Quick start
 
-### 1. Initialize a dataset
+**1. Initialize a dataset**
 
 ```bash
-pyperun init MON-EXPERIENCE
+pyperun init MY-EXPERIMENT
 ```
 
-This creates:
-- `datasets/MON-EXPERIENCE/00_raw/` — directory for raw CSV files
-- `flows/mon-experience.json` — flow template with all 7 steps
+Creates `datasets/MY-EXPERIMENT/00_raw/` and a flow template at `flows/my-experiment.json`.
 
-### 2. Add raw data
+**2. Drop your raw CSV files in**
 
 ```bash
-cp /path/to/csvs/*.csv datasets/MON-EXPERIENCE/00_raw/
+cp /path/to/data/*.csv datasets/MY-EXPERIMENT/00_raw/
 ```
 
-Expected CSV format (no header, semicolon-delimited, key:value pairs):
+Expected format — no header, semicolon-delimited, key:value pairs:
 
 ```
 2026-01-20T09:07:58.142308Z;m0:10;m1:12;outdoor_temp:18.94
 2026-01-20T09:07:59.142308Z;m0:11;m1:13;outdoor_temp:18.95
 ```
 
-### 3. Run the pipeline
+**3. Run the pipeline**
 
 ```bash
-pyperun flow mon-experience
+pyperun flow my-experiment
 ```
 
-### 4. Check status
+**4. Check what's been processed**
 
 ```bash
 pyperun status
 ```
 
 ```
-mon-experience (MON-EXPERIENCE)
-  parse          10_parsed            84 files   last: 2026-02-17
-  clean          20_clean             84 files   last: 2026-02-17
+my-experiment (MY-EXPERIMENT)
+  parse       10_parsed      84 files   last: 2026-02-17
+  clean       20_clean       84 files   last: 2026-02-17
+  resample    25_resampled   84 files   last: 2026-02-17
   ...
   -> up-to-date
 ```
 
+---
+
 ## CLI reference
 
-### `pyperun flow <name>`
-
-Run a full pipeline (all steps sequentially).
+### `pyperun flow <name>` — run a pipeline
 
 ```bash
-# Run the full pipeline
-pyperun flow valvometry_daily
+pyperun flow my-experiment                            # full run
+pyperun flow my-experiment --step clean               # single step
+pyperun flow my-experiment --from-step resample       # from a step to the end
+pyperun flow my-experiment --from-step clean --to-step aggregate  # range
 
-# Run a single step
-pyperun flow valvometry_daily --step clean
+pyperun flow my-experiment --from 2026-02-01 --to 2026-02-10      # time filter
+pyperun flow my-experiment --last                                   # incremental (delta only)
 
-# Run from a step to the end
-pyperun flow valvometry_daily --from-step resample
-
-# Run a range of steps
-pyperun flow valvometry_daily --from-step clean --to-step aggregate
-
-# Time filtering (ISO 8601)
-pyperun flow valvometry_daily --from 2026-02-01 --to 2026-02-10
-
-# Incremental mode (only process new data since last run)
-pyperun flow valvometry_daily --last
-
-# Replace output for the time range being processed
-pyperun flow valvometry_daily --output-mode replace
-
-# Wipe all output directories and reprocess from scratch
-pyperun flow valvometry_daily --output-mode full-replace
+pyperun flow my-experiment --output-mode replace                    # overwrite output for the time range
+pyperun flow my-experiment --output-mode full-replace               # wipe all outputs and reprocess
 ```
 
-### `pyperun run <treatment>`
-
-Run a single treatment with explicit paths.
+### `pyperun run <treatment>` — run a single treatment
 
 ```bash
-pyperun run parse --input datasets/PREMANIP-GRACE/00_raw --output datasets/PREMANIP-GRACE/10_parsed
+pyperun run parse \
+    --input  datasets/MY-EXPERIMENT/00_raw \
+    --output datasets/MY-EXPERIMENT/10_parsed
 
-# With custom params
 pyperun run aggregate \
-    --input datasets/PREMANIP-GRACE/30_transform \
-    --output datasets/PREMANIP-GRACE/40_aggregated \
+    --input  datasets/MY-EXPERIMENT/30_transform \
+    --output datasets/MY-EXPERIMENT/40_aggregated \
     --params '{"windows": ["30s", "5min"], "metrics": ["mean", "median"]}'
 ```
 
-### `pyperun init <dataset>`
-
-Scaffold a new dataset (creates directories + flow template).
+### Other commands
 
 ```bash
-pyperun init MY-EXPERIMENT
+pyperun init MY-EXPERIMENT          # scaffold a new dataset
+pyperun status                      # show processing state for all datasets
+pyperun list flows                  # list available flows
+pyperun list treatments             # list available treatments
+pyperun list steps --flow my-flow   # list steps in a flow
 ```
 
-### `pyperun status`
-
-Show the state of all datasets (file counts, last modification date).
-
-```bash
-pyperun status
-```
-
-### `pyperun list`
-
-```bash
-pyperun list flows        # List available flows
-pyperun list treatments   # List available treatments
-pyperun list steps --flow valvometry_daily  # List steps in a flow
-```
-
-## Custom treatments
-
-Pyperun discovers treatments from two locations, **local takes priority over built-ins**:
-
-1. `./treatments/<name>/` — your project (custom or overrides)
-2. `pyperun/treatments/<name>/` — built-in treatments (fallback)
-
-To add a custom treatment, create a directory in your project:
-
-```
-mon-projet/
-  treatments/
-    my_treatment/
-      treatment.json   # param schema with defaults
-      run.py           # def run(input_dir, output_dir, params)
-  flows/
-  datasets/
-```
-
-To override a built-in, create a treatment with the same name in `./treatments/`. To use only built-ins, simply omit the `treatments/` directory.
-
-## Pipeline steps
-
-| # | Treatment | Directory | Description |
-|---|-----------|-----------|-------------|
-| 1 | `parse` | 00_raw -> 10_parsed | Parse key:value CSV into typed parquet, split by domain and day |
-| 2 | `clean` | 10_parsed -> 20_clean | Drop duplicates, enforce min/max bounds, remove spikes (rolling median) |
-| 3 | `resample` | 20_clean -> 25_resampled | Regular 1s grid, floor to second, forward-fill small gaps (<=2s) |
-| 4 | `transform` | 25_resampled -> 30_transform | Apply mathematical transformations (sqrt_inv, cbrt_inv, log) to selected columns |
-| 5 | `normalize` | 30_transform -> 35_normalized | Min-max normalization of selected columns (optional) |
-| 6 | `aggregate` | 30_transform (or 35_normalized) -> 40_aggregated | Multi-window aggregation (10s, 60s, 5min, 1h) with configurable metrics |
-| 7 | `to_postgres` | 40_aggregated -> PostgreSQL | Export to PostgreSQL wide tables (for Grafana) |
-| 8 | `exportcsv` | 40_aggregated -> 61_exportcsv | Export to CSV per device, with column renaming and timezone conversion |
-| 8 | `exportparquet` | 40_aggregated -> 62_exportparquet | Export selected aggregation windows to parquet files |
+---
 
 ## Flow format
 
-Flows are JSON files in `flows/`. Each step declares its `input` and `output` explicitly — the data flow is readable like a recipe, without having to look at any code.
+A flow is a JSON file in `flows/`. Each step declares its treatment, input directory, and output directory. The data flow is readable like a recipe.
 
 ```json
 {
@@ -229,8 +168,8 @@ Flows are JSON files in `flows/`. Each step declares its `input` and `output` ex
             "output": "61_exportcsv",
             "params": {
                 "columns": {
-                    "m0__raw__mean": {"name": "c0", "dtype": "int"},
-                    "m1__raw__mean": {"name": "c1", "dtype": "int"},
+                    "m0__raw__mean": "c0",
+                    "m1__raw__mean": "c1",
                     "outdoor_temp__raw__mean": "temperature"
                 }
             }
@@ -239,47 +178,66 @@ Flows are JSON files in `flows/`. Each step declares its `input` and `output` ex
 }
 ```
 
-**Paths** (`input`/`output`) are relative to `datasets/<dataset>/` when `dataset` is set, or absolute otherwise.
+When `dataset` is set, `input`/`output` paths are relative to `datasets/<DATASET>/`. Without it, use absolute paths.
 
-**Params hierarchy** (lowest to highest priority):
+### Params hierarchy
 
-| Level | Where | Wins over |
-|-------|-------|-----------|
-| `treatment.json` | default values per treatment | — |
-| `flow.params` | inherited by all steps | treatment defaults |
-| `step.params` | overrides for that step only | flow params |
-| CLI `--params` / `--from` / `--to` | runtime override | everything |
+| Priority | Source | Scope |
+|----------|--------|-------|
+| lowest | `treatment.json` defaults | treatment built-in |
+| | `flow.params` | all steps |
+| | `step.params` | that step only |
+| highest | CLI `--params` / `--from` / `--to` | runtime override |
 
-`from`/`to` in `flow.params` set the default time range for all steps; CLI `--from`/`--to` override them.
+`from`/`to` in `flow.params` set the default time range for all steps; CLI `--from`/`--to` always win.
 
-## Configuration
+---
 
-Each treatment is configured via `pyperun/treatments/<name>/treatment.json` which declares typed params with defaults. Params can be overridden in the flow JSON or via `--params` on the CLI.
+## Pipeline steps
 
-### parse
+| Treatment | Input → Output | What it does |
+|-----------|---------------|--------------|
+| `parse` | `00_raw` → `10_parsed` | Parse key:value CSV → typed parquet, split by domain and day |
+| `clean` | `10_parsed` → `20_clean` | Drop duplicates, clamp to min/max, remove spikes (rolling median) |
+| `resample` | `20_clean` → `25_resampled` | Regular 1s grid, forward-fill short gaps |
+| `transform` | `25_resampled` → `30_transform` | Apply column transforms: `sqrt_inv`, `cbrt_inv`, `log` (add or replace) |
+| `normalize` | `30_transform` → `35_normalized` | Min-max normalization of selected columns *(optional)* |
+| `aggregate` | `30_transform` → `40_aggregated` | Multi-window aggregation (10s, 60s, 5min, 1h) |
+| `to_postgres` | `40_aggregated` → PostgreSQL | Export to wide PostgreSQL tables (e.g. for Grafana) |
+| `exportcsv` | `40_aggregated` → `61_exportcsv` | Export per-device CSV with column renaming and timezone conversion |
+| `exportparquet` | `40_aggregated` → `62_exportparquet` | Export selected aggregation windows to parquet |
+
+---
+
+## Treatment configuration
+
+Each treatment exposes typed params with defaults, overridable in the flow or via `--params`.
+
+<details>
+<summary><strong>parse</strong></summary>
 
 | Param | Default | Description |
 |-------|---------|-------------|
 | `delimiter` | `";"` | CSV delimiter |
 | `tz` | `"UTC"` | Timezone of raw timestamps |
-| `timestamp_column` | `"ts"` | Name of the timestamp column |
+| `timestamp_column` | `"ts"` | Name of the timestamp field |
 | `domains` | bio_signal + environment | Domain split: prefix-based or explicit columns, with dtype |
-| `file_name_substitute` | `[]` | Filename substitutions for source extraction |
+| `file_name_substitute` | `[]` | Filename substitutions for source name extraction |
 
-### clean
+</details>
+
+<details>
+<summary><strong>clean</strong></summary>
 
 | Param | Default | Description |
 |-------|---------|-------------|
 | `drop_duplicates` | `true` | Remove duplicate timestamps |
-| `domains` | per-domain config | `min_value`, `max_value`, `spike_window`, `spike_threshold` per domain |
+| `domains` | per-domain | `min_value`, `max_value`, `spike_window`, `spike_threshold` per domain |
 
-### transform
+</details>
 
-| Param | Default | Description |
-|-------|---------|-------------|
-| `transforms` | `[]` | List of `{function, target, mode}` specs. Functions: `sqrt_inv`, `log`. Mode: `add` (new column) or `replace` |
-
-### resample
+<details>
+<summary><strong>resample</strong></summary>
 
 | Param | Default | Description |
 |-------|---------|-------------|
@@ -287,119 +245,159 @@ Each treatment is configured via `pyperun/treatments/<name>/treatment.json` whic
 | `max_gap_fill_s` | `2` | Max gap (seconds) to forward-fill |
 | `agg_method` | per-domain | Aggregation method when flooring to `freq` |
 
-### aggregate
+</details>
+
+<details>
+<summary><strong>transform</strong></summary>
 
 | Param | Default | Description |
 |-------|---------|-------------|
-| `windows` | `["10s", "60s", "5min", "1h"]` | Time windows for aggregation |
-| `metrics` | `["mean", "std", "min", "max"]` | Aggregation functions |
+| `transforms` | `[]` | List of `{function, target, mode}` — functions: `sqrt_inv`, `cbrt_inv`, `log`; mode: `add` or `replace` |
 
-### to_postgres
+</details>
+
+<details>
+<summary><strong>aggregate</strong></summary>
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `windows` | `["10s","60s","5min","1h"]` | Time windows |
+| `metrics` | `["mean","std","min","max"]` | Aggregation functions |
+
+</details>
+
+<details>
+<summary><strong>to_postgres</strong></summary>
 
 | Param | Default | Description |
 |-------|---------|-------------|
 | `host` | `"localhost"` | PostgreSQL host |
 | `port` | `5432` | PostgreSQL port |
-| `dbname` | required | Database name |
-| `user` | required | Database user |
-| `password` | required | Database password |
+| `dbname` | *(required)* | Database name |
+| `user` | *(required)* | User |
+| `password` | *(required)* | Password |
 | `table_template` | `"{source}__{domain}__{aggregation}"` | Table naming pattern |
-| `table_prefix` | `""` | Prefix added to table names |
+| `table_prefix` | `""` | Prefix prepended to table names |
 | `mode` | `"append"` | `append` or `replace` |
 
-### exportcsv
+</details>
+
+<details>
+<summary><strong>exportcsv</strong></summary>
 
 | Param | Default | Description |
 |-------|---------|-------------|
 | `aggregation` | `"10s"` | Which aggregation window to export |
 | `domain` | `"bio_signal"` | Domain to export |
 | `tz` | `"Europe/Paris"` | Output timezone |
-| `from` / `to` | none | Date range filter (optional) |
-| `columns` | m0-m11 as int | Dict mapping `source_column` -> `export_name` or `{"name": "...", "dtype": "int", "decimals": N}` (controls selection, renaming, order, integer casting, and optional float rounding) |
+| `from` / `to` | none | Optional date range filter |
+| `columns` | m0–m11 as int | `source_col → export_name` or `{"name":…,"dtype":"int","decimals":N}` |
 
-## Project structure
+</details>
 
-### Pyperun (framework repo)
+---
 
-```
-pyperun/
-  cli.py                    # CLI entry point (pyperun command)
-  core/
-    pipeline.py             # Pipeline registry (treatment -> directory mapping)
-    flow.py                 # Flow executor (runs steps sequentially)
-    runner.py               # Single treatment executor
-    validator.py            # treatment.json validation + param merging
-    logger.py               # jsonlines event logging
-    timefilter.py           # Time filtering and incremental processing
-    filename.py             # Parquet filename conventions
-  treatments/               # Built-in treatments
-    parse/                  # treatment.json + run.py
-    clean/
-    resample/
-    transform/
-    normalize/
-    aggregate/
-    to_postgres/
-    exportcsv/
-    exportparquet/
-tests/
-scripts/
-  hourly_sync.sh            # Cron script for incremental processing
-  run_scheduled_flows.sh    # Run all flows listed in scheduled_flows.txt
-  run_flow_hourly.sh        # Run a single flow on a loop
-  update.sh                 # Pull latest code and reinstall
-```
+## Custom treatments
 
-### Your project repo
+Pyperun discovers treatments from two locations — **local takes priority**:
+
+1. `./treatments/<name>/` — your project (custom or overrides)
+2. `pyperun/treatments/<name>/` — built-in fallback
+
+To add a custom treatment:
 
 ```
-mon-projet/
-  treatments/               # Optional: custom or overriding treatments
+my-project/
+  treatments/
     my_treatment/
-      treatment.json
-      run.py
-  flows/                    # Flow definitions (JSON)
-  datasets/                 # Data (gitignored)
-    <DATASET>/
-      00_raw/               # Raw CSV input
-      10_parsed/            # Parquet, split by domain + day
+      treatment.json    # param schema + defaults
+      run.py            # def run(input_dir, output_dir, params): ...
+```
+
+To override a built-in, use the same treatment name in `./treatments/`.
+
+---
+
+## Project layout
+
+```
+pyperun/                          ← framework (this repo)
+  cli.py                          ← pyperun command entry point
+  core/
+    flow.py                       ← runs a flow sequentially
+    runner.py                     ← runs a single treatment
+    pipeline.py                   ← treatment → directory registry
+    validator.py                  ← param validation + merging
+    timefilter.py                 ← time range filtering, --last logic
+    filename.py                   ← parquet naming conventions
+    logger.py                     ← jsonlines event log (logs/)
+  treatments/                     ← built-in treatments
+    parse/ clean/ resample/ transform/ normalize/
+    aggregate/ to_postgres/ exportcsv/ exportparquet/
+scripts/
+  hourly_sync.sh                  ← cron: incremental run for one flow
+  run_scheduled_flows.sh          ← cron: run all flows in scheduled_flows.txt
+  run_flow_hourly.sh              ← loop: run a flow every N seconds
+  update.sh                       ← git pull + pip install -e .
+```
+
+```
+my-project/                       ← your experiment repo
+  flows/                          ← flow definitions (JSON)
+  datasets/                       ← data (gitignored)
+    MY-EXPERIMENT/
+      00_raw/                     ← raw CSV input
+      10_parsed/
       20_clean/
       25_resampled/
       30_transform/
       40_aggregated/
-      61_exportcsv/        # CSV exports
+      61_exportcsv/
+  treatments/                     ← optional custom treatments
 ```
 
-## Production (cron)
+---
 
-For automatic incremental processing, add `scripts/hourly_sync.sh` to crontab:
+## Production — incremental cron
+
+Run the pipeline automatically every hour, processing only new data:
 
 ```bash
 crontab -e
-0 * * * * /home/user/pyperun/scripts/hourly_sync.sh >> /var/log/pyperun_hourly.log 2>&1
+# Add:
+0 * * * * /path/to/pyperun/scripts/hourly_sync.sh my-flow >> /var/log/pyperun.log 2>&1
 ```
 
-The script uses `--last` to detect new data and only process the delta.
+Or run multiple flows from a list:
 
-## Data conventions
+```bash
+# scripts/scheduled_flows.txt
+my-flow-streaming
+my-flow-daily
 
-- **Parquet naming**: `<source>__<domain>__<YYYY-MM-DD>.parquet`
-- **Aggregated naming**: `<source>__<domain>__<YYYY-MM-DD>__<window>.parquet`
-- **Domains**: `bio_signal` (m0-m11, Int64) and `environment` (outdoor_temp, Float64)
-- **Logging**: all events go to `pyperun.log` (jsonlines, one event per line)
+# crontab
+0 * * * * /path/to/pyperun/scripts/run_scheduled_flows.sh
+```
+
+Both scripts use `--last` to detect the delta between input and output and skip runs when nothing is new.
+
+---
 
 ## Development
 
 ```bash
-# Install with dev dependencies
 pip install -e ".[dev]"
 
-# Run all tests
-python -m pytest tests/ -v
-
-# Run a single test
-python -m pytest tests/test_runner.py::test_run_with_defaults -v
-
-# Lint
-ruff check .
+pytest tests/ -v                                      # full test suite
+pytest tests/test_runner.py::test_run_with_defaults   # single test
+ruff check .                                          # lint
 ```
+
+---
+
+## Data conventions
+
+- **Parquet filenames**: `<source>__<domain>__<YYYY-MM-DD>.parquet`
+- **Aggregated filenames**: `<source>__<domain>__<YYYY-MM-DD>__<window>.parquet`
+- **Default domains**: `bio_signal` (m0–m11, Int64) · `environment` (outdoor_temp, Float64)
+- **Logs**: `logs/pyperun.log` — jsonlines, one event per run
