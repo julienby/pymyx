@@ -10,6 +10,7 @@ dist/
 build/
 
 # Logs
+logs/
 *.log
 
 # Internal / AI guides

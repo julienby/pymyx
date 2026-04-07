@@ -6,7 +6,7 @@ from pathlib import Path
 import jsonlines
 
 
-LOG_PATH = Path("pyperun.log")
+LOG_PATH = Path("logs/pyperun.log")
 
 
 _REDACT_KEYS = {"password"}
@@ -43,5 +43,6 @@ def log_event(
         entry["duration_ms"] = round(duration_ms, 1)
     if error is not None:
         entry["error"] = error
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with jsonlines.open(LOG_PATH, mode="a") as writer:
         writer.write(entry)
