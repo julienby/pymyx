@@ -38,8 +38,6 @@ pip install -e ".[dev]"
 > echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 > ```
 
-> **setuptools too old?** Run `pip install --upgrade pip setuptools` then retry.
-
 All `pyperun` commands must be run from your **project directory** (the one containing `flows/` and `datasets/`).
 
 ---
@@ -105,6 +103,16 @@ pyperun flow my-experiment --last                                   # incrementa
 
 pyperun flow my-experiment --output-mode replace                    # overwrite output for the time range
 pyperun flow my-experiment --output-mode full-replace               # wipe all outputs and reprocess
+pyperun flow my-experiment --dry-run                                # preview without running
+```
+
+Each run prints a `run_id` (8-char hex) that can be used to retrieve its events from the log:
+
+```
+[flow] Starting 'my-experiment' (6 steps)  run_id=a3f9b2c1
+[flow] Step 1/6: parse
+  ...
+[flow] Completed 'my-experiment' successfully  run_id=a3f9b2c1
 ```
 
 ### `pyperun run <treatment>` — run a single treatment
@@ -120,6 +128,22 @@ pyperun run aggregate \
     --params '{"windows": ["30s", "5min"], "metrics": ["mean", "median"]}'
 ```
 
+### Query commands — `--format json`
+
+All read-only commands accept `--format json` for machine-readable output:
+
+```bash
+pyperun list flows                         # human text
+pyperun list flows --format json           # JSON array
+
+pyperun list treatments --format json
+pyperun list steps --flow my-flow --format json
+pyperun describe aggregate --format json
+pyperun status --format json
+```
+
+`--format json` outputs valid JSON on stdout, suitable for piping, scripting, and API wrappers.
+
 ### Other commands
 
 ```bash
@@ -128,13 +152,18 @@ pyperun status                      # show processing state for all datasets
 pyperun list flows                  # list available flows
 pyperun list treatments             # list available treatments
 pyperun list steps --flow my-flow   # list steps in a flow
+pyperun describe <treatment>        # show params and formats for a treatment
+pyperun export MY-EXPERIMENT        # export dataset to a portable archive
+pyperun import my-archive.tar.gz    # import on another server
+pyperun delete MY-EXPERIMENT        # delete dataset and its flows
+pyperun upgrade                     # pull latest pyperun and reinstall
 ```
 
 ---
 
 ## Flow format
 
-A flow is a JSON file in `flows/`. Each step declares its treatment, input directory, and output directory. The data flow is readable like a recipe.
+A flow is a JSON file in `flows/`. Each step declares its treatment, input directory, and output directory.
 
 ```json
 {
@@ -278,7 +307,7 @@ Each treatment exposes typed params with defaults, overridable in the flow or vi
 | `password` | *(required)* | Password |
 | `table_template` | `"{source}__{domain}__{aggregation}"` | Table naming pattern |
 | `table_prefix` | `""` | Prefix prepended to table names |
-| `mode` | `"append"` | `append` or `replace` |
+| `mode` | `"append"` | `append`, `replace`, or `reset` |
 
 </details>
 
@@ -294,6 +323,111 @@ Each treatment exposes typed params with defaults, overridable in the flow or vi
 | `columns` | m0–m11 as int | `source_col → export_name` or `{"name":…,"dtype":"int","decimals":N}` |
 
 </details>
+
+---
+
+## External integration — Python API & Flask
+
+Pyperun exposes a clean Python API in `pyperun.core.api` so external tools (Flask, scripts, AI agents) can query state and trigger runs **without going through the CLI**.
+
+### Python API
+
+```python
+from pyperun.core.api import (
+    # Discovery
+    list_flows,           # → [{name, description, dataset, n_steps}]
+    list_steps,           # list_steps("my-flow") → [{index, treatment, name, input, output, params}]
+    list_treatments,      # → [{name, description}]
+    describe_treatment,   # describe_treatment("parse") → {name, description, params: [...]}
+    list_presets,         # → [{name, description, steps}]
+    # State
+    get_status,           # → [{flow, dataset, status, steps: [{treatment, n_files, last_modified}]}]
+    # Dataset lifecycle
+    init_dataset,         # init_dataset("MY-EXP", preset="full") → {dataset, flow, created_dirs, ...}
+    delete_dataset,       # delete_dataset("MY-EXP") → {deleted_dirs, deleted_flows, ...}
+    # Run history
+    list_runs,            # list_runs(limit=50) → [{run_id, flow, started_at, status, n_steps_done}]
+    get_run_events,       # get_run_events("a3f9b2c1") → [{ts, treatment, status, duration_ms, ...}]
+)
+from pyperun.core.flow import run_flow
+from pyperun.core.logger import new_run_id
+```
+
+All functions return plain dicts/lists — no printing, no side effects. Import them directly.
+
+### Flask API server
+
+The file `api_server.py` (at project root) provides a ready-to-use REST API:
+
+```bash
+pip install flask
+flask --app api_server run --host 0.0.0.0 --port 5000
+
+# Production (single worker — runs are threads, not processes):
+pip install gunicorn
+gunicorn -w 1 -b 0.0.0.0:5000 api_server:app
+```
+
+Optional API key authentication:
+
+```bash
+export PYPERUN_API_KEY=my-secret-key
+flask --app api_server run ...
+# All requests must include: Authorization: Bearer my-secret-key
+```
+
+**Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/api/flows` | List flows |
+| `GET` | `/api/flows/<flow>/steps` | Steps of a flow (passwords masked) |
+| `GET` | `/api/treatments` | List treatments |
+| `GET` | `/api/treatments/<name>` | Describe a treatment |
+| `GET` | `/api/presets` | List available presets |
+| `GET` | `/api/status` | Pipeline state for all datasets |
+| `POST` | `/api/datasets` | Create a new dataset (init) |
+| `DELETE` | `/api/datasets/<dataset>` | Delete a dataset and its flows |
+| `POST` | `/api/run/<flow>` | Launch a flow → returns `run_id` immediately (202) |
+| `GET` | `/api/runs?limit=50` | Run history |
+| `GET` | `/api/runs/<run_id>` | Events of a specific run (for polling) |
+
+**Exemples curl :**
+
+```bash
+# Créer un dataset
+curl -X POST http://localhost:5000/api/datasets \
+     -H "Content-Type: application/json" \
+     -d '{"dataset": "MY-EXPERIMENT", "preset": "full"}'
+# → {"dataset": "MY-EXPERIMENT", "flow": "my-experiment", "action": "created", "created_dirs": [...]}
+
+# Supprimer un dataset
+curl -X DELETE http://localhost:5000/api/datasets/MY-EXPERIMENT
+# → {"deleted_dataset": "MY-EXPERIMENT", "deleted_dirs": [...], "deleted_flows": [...]}
+
+# Lancer un flow
+curl -X POST http://localhost:5000/api/run/my-experiment \
+     -H "Content-Type: application/json" \
+     -d '{"last": true}'
+# → {"run_id": "a3f9b2c1", "flow": "my-experiment", "status": "started"}
+
+# Suivre la progression (poll toutes les 2s jusqu'à status = success|error)
+curl http://localhost:5000/api/runs/a3f9b2c1
+# → {"run_id": "a3f9b2c1", "status": "running", "n_steps_done": 3, "n_steps_total": 6, "events": [...]}
+```
+
+Optional POST body fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `from` | ISO 8601 string | Start of time window |
+| `to` | ISO 8601 string | End of time window |
+| `last` | bool | Incremental mode (mutually exclusive with from/to) |
+| `step` | string | Run a single named step |
+| `from_step` | string | Start from this step |
+| `to_step` | string | Stop at this step |
+| `output_mode` | string | `append` (default), `replace`, `full-replace` |
 
 ---
 
@@ -314,7 +448,7 @@ my-project/
       run.py            # def run(input_dir, output_dir, params): ...
 ```
 
-To override a built-in, use the same treatment name in `./treatments/`.
+Scaffold with: `pyperun new my_treatment`
 
 ---
 
@@ -324,16 +458,18 @@ To override a built-in, use the same treatment name in `./treatments/`.
 pyperun/                          ← framework (this repo)
   cli.py                          ← pyperun command entry point
   core/
-    flow.py                       ← runs a flow sequentially
+    flow.py                       ← runs a flow sequentially, returns run_id
     runner.py                     ← runs a single treatment
     pipeline.py                   ← treatment → directory registry
     validator.py                  ← param validation + merging
     timefilter.py                 ← time range filtering, --last logic
     filename.py                   ← parquet naming conventions
-    logger.py                     ← jsonlines event log (logs/)
+    logger.py                     ← jsonlines event log (logs/pyperun.log)
+    api.py                        ← Python API (list_flows, get_status, list_runs, ...)
   treatments/                     ← built-in treatments
     parse/ clean/ resample/ transform/ normalize/
     aggregate/ to_postgres/ exportcsv/ exportparquet/
+api_server.py                     ← Flask REST API server (optional)
 scripts/
   hourly_sync.sh                  ← cron: incremental run for one flow
   run_scheduled_flows.sh          ← cron: run all flows in scheduled_flows.txt
@@ -354,6 +490,8 @@ my-project/                       ← your experiment repo
       40_aggregated/
       61_exportcsv/
   treatments/                     ← optional custom treatments
+  logs/
+    pyperun.log                   ← jsonlines event log (auto-created)
 ```
 
 ---
@@ -400,4 +538,4 @@ ruff check .                                          # lint
 - **Parquet filenames**: `<source>__<domain>__<YYYY-MM-DD>.parquet`
 - **Aggregated filenames**: `<source>__<domain>__<YYYY-MM-DD>__<window>.parquet`
 - **Default domains**: `bio_signal` (m0–m11, Int64) · `environment` (outdoor_temp, Float64)
-- **Logs**: `logs/pyperun.log` — jsonlines, one event per run
+- **Logs**: `logs/pyperun.log` — jsonlines, one event per treatment step, with `run_id` for grouping

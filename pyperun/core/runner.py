@@ -99,6 +99,7 @@ def run_treatment(
     time_to=None,
     output_mode: str = "append",
     flow: str | None = None,
+    run_id: str | None = None,
 ) -> None:
     treatment_dir = resolve_treatment_dir(name)
     schema = load_treatment(treatment_dir)
@@ -135,7 +136,8 @@ def run_treatment(
         if not any(filtered_dir.rglob("*")):
             log_event(name, "skip", input_dir, output_dir,
                       time_from=time_from.isoformat() if time_from else None,
-                      time_to=time_to.isoformat() if time_to else None)
+                      time_to=time_to.isoformat() if time_to else None,
+                      run_id=run_id)
             print(f"  [{name}] No files in time range, skipping")
             _cleanup_tmpdir(filtered_dir)
             return
@@ -149,15 +151,15 @@ def run_treatment(
     if time_to:
         log_kwargs["time_to"] = time_to.isoformat()
 
-    log_event(name, "start", input_dir, output_dir, params=merged, flow=flow, **log_kwargs)
+    log_event(name, "start", input_dir, output_dir, params=merged, flow=flow, run_id=run_id, **log_kwargs)
     t0 = time.perf_counter()
     try:
         mod.run(effective_input, output_dir, merged)
         duration_ms = (time.perf_counter() - t0) * 1000
-        log_event(name, "success", input_dir, output_dir, duration_ms=duration_ms, flow=flow, **log_kwargs)
+        log_event(name, "success", input_dir, output_dir, duration_ms=duration_ms, flow=flow, run_id=run_id, **log_kwargs)
     except Exception as exc:
         duration_ms = (time.perf_counter() - t0) * 1000
-        log_event(name, "error", input_dir, output_dir, duration_ms=duration_ms, error=str(exc), flow=flow, **log_kwargs)
+        log_event(name, "error", input_dir, output_dir, duration_ms=duration_ms, error=str(exc), flow=flow, run_id=run_id, **log_kwargs)
         raise
     finally:
         if filtered_dir is not None:

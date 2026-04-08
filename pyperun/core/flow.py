@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 
+from pyperun.core.logger import new_run_id
 from pyperun.core.pipeline import DATASETS_PREFIX, resolve_paths
 from pyperun.core.runner import run_treatment
 from pyperun.core.timefilter import parse_iso_utc, resolve_last_range
@@ -139,7 +140,8 @@ def run_flow(
     to_step: str | None = None,
     step: str | None = None,
     dry_run: bool = False,
-) -> None:
+    run_id: str | None = None,
+) -> str:
     flow_path = _find_flow(name)
 
     with open(flow_path) as f:
@@ -229,9 +231,11 @@ def run_flow(
 
     if dry_run:
         _print_dry_run(name, steps, time_from, time_to, last)
-        return
+        return ""
 
-    print(f"[flow] Starting '{name}' ({len(steps)} steps)")
+    if run_id is None:
+        run_id = new_run_id()
+    print(f"[flow] Starting '{name}' ({len(steps)} steps)  run_id={run_id}")
     for i, s in enumerate(steps, 1):
         treatment = s["treatment"]
         input_dir = s["input"]
@@ -246,12 +250,13 @@ def run_flow(
         try:
             run_treatment(treatment, input_dir, output_dir, params,
                           time_from=step_time_from, time_to=step_time_to,
-                          output_mode=output_mode, flow=name)
+                          output_mode=output_mode, flow=name, run_id=run_id)
         except Exception as exc:
             print(f"[flow] FAILED at step {i} ({treatment}): {exc}", file=sys.stderr)
             raise SystemExit(1)
 
-    print(f"[flow] Completed '{name}' successfully")
+    print(f"[flow] Completed '{name}' successfully  run_id={run_id}")
+    return run_id
 
 
 def main():

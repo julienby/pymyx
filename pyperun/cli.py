@@ -129,78 +129,85 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
 
 def cmd_describe(args, _parser):
-    import json
-    from pyperun.core.runner import TREATMENTS_ROOT
+    from pyperun.core.api import describe_treatment
 
-    name = args.treatment
-    path = TREATMENTS_ROOT / name / "treatment.json"
-    if not path.exists():
-        print(f"Error: treatment '{name}' not found", file=sys.stderr)
+    try:
+        t = describe_treatment(args.treatment)
+    except FileNotFoundError:
+        print(f"Error: treatment '{args.treatment}' not found", file=sys.stderr)
         raise SystemExit(1)
 
-    with open(path) as f:
-        t = json.load(f)
+    if args.format == "json":
+        print(json.dumps(t, indent=2, ensure_ascii=False))
+        return
 
     print(f"\n\033[1m{t['name']}\033[0m — {t['description']}")
     print()
-    if "input_format" in t:
+    if t.get("input_format"):
         print(f"  Input:   {t['input_format']}")
-    if "output_format" in t:
+    if t.get("output_format"):
         print(f"  Output:  {t['output_format']}")
     print()
     print("  Params:")
-    for pname, pdef in t.get("params", {}).items():
-        ptype = pdef.get("type", "")
-        default = json.dumps(pdef.get("default"), ensure_ascii=False)
-        desc = pdef.get("description", "")
-        print(f"    \033[1m{pname}\033[0m  ({ptype})  default: {default}")
-        if desc:
-            print(f"      {desc}")
+    for p in t.get("params", []):
+        default = json.dumps(p["default"], ensure_ascii=False)
+        print(f"    \033[1m{p['name']}\033[0m  ({p['type']})  default: {default}")
+        if p.get("description"):
+            print(f"      {p['description']}")
     print()
 
 
 def cmd_list(args, _parser):
-    import json as _json
-    from pyperun.core.flow import get_flows_root, _find_flow as find_flow
-    from pyperun.core.runner import TREATMENTS_ROOT
+    from pyperun.core.api import list_flows, list_treatments, list_steps
+
+    fmt = args.format
 
     if args.what == "flows":
-        for f in sorted(get_flows_root().glob("*.json")):
-            print(f"  {f.stem}")
+        data = list_flows()
+        if fmt == "json":
+            print(json.dumps(data, indent=2, ensure_ascii=False))
+            return
+        for f in data:
+            print(f"  {f['name']}")
+
     elif args.what == "treatments":
-        for d in sorted(TREATMENTS_ROOT.iterdir()):
-            p = d / "treatment.json"
-            if p.exists():
-                with open(p) as f:
-                    t = _json.load(f)
-                desc = t.get("description", "")
-                print(f"  {d.name:<16s}  {desc}")
+        data = list_treatments()
+        if fmt == "json":
+            print(json.dumps(data, indent=2, ensure_ascii=False))
+            return
+        for t in data:
+            print(f"  {t['name']:<16s}  {t['description']}")
+
     elif args.what == "presets":
-        presets = _load_presets()
         from pathlib import Path
+        from pyperun.core.api import list_presets
+        data = list_presets()
+        if fmt == "json":
+            print(json.dumps(data, indent=2, ensure_ascii=False))
+            return
         source = "presets.json" if (Path.cwd() / _PRESETS_FILENAME).exists() else "built-in only"
         print(f"  ({source})")
         print()
-        for name, spec in presets.items():
-            desc = spec.get("description", "")
-            steps = spec.get("steps") or ["all steps"]
-            steps_str = " → ".join(steps) if isinstance(steps, list) else "all steps"
-            print(f"  {name:<16s}  {desc}")
+        for p in data:
+            steps_str = " → ".join(p["steps"]) if p["steps"] else "all steps"
+            print(f"  {p['name']:<16s}  {p['description']}")
             print(f"  {'':16s}  {steps_str}")
             print()
+
     elif args.what == "steps":
         if not args.flow:
             print("Error: --flow required with 'pyperun list steps'", file=sys.stderr)
             raise SystemExit(1)
         try:
-            flow_path = find_flow(args.flow)
+            data = list_steps(args.flow)
         except FileNotFoundError as e:
             print(f"Error: {e}", file=sys.stderr)
             raise SystemExit(1)
-        with open(flow_path) as f:
-            flow = json.load(f)
-        for i, s in enumerate(flow.get("steps", []), 1):
-            print(f"  {i}. {s['treatment']}")
+        if fmt == "json":
+            print(json.dumps(data, indent=2, ensure_ascii=False))
+            return
+        for s in data:
+            print(f"  {s['index']}. {s['name']}")
 
 
 _BUILTIN_PRESETS = {
@@ -241,131 +248,73 @@ def _load_presets() -> dict:
 
 
 def cmd_init(args, _parser):
-    import os
     from pathlib import Path
-    from pyperun.core.pipeline import PIPELINE_STEPS
+    from pyperun.core.api import init_dataset
 
-    dataset = args.dataset
     project_dir = Path(args.path).resolve() if args.path else Path.cwd()
-    preset_name = args.preset
 
-    presets = _load_presets()
-    if preset_name not in presets:
-        print(f"Error: unknown preset '{preset_name}'. Available: {', '.join(presets)}", file=sys.stderr)
+    # Interactive confirmation when --force overwrites an existing flow
+    if args.force:
+        flow_name = args.flow or args.dataset.lower()
+        flow_path = project_dir / "flows" / f"{flow_name}.json"
+        if flow_path.exists():
+            answer = input(f"Overwrite {flow_path.name} with preset '{args.preset}'? [y/N] ").strip().lower()
+            if answer != "y":
+                print("Cancelled.")
+                raise SystemExit(0)
+
+    try:
+        result = init_dataset(
+            dataset=args.dataset,
+            preset=args.preset,
+            flow_name=args.flow,
+            raw=args.raw,
+            force=args.force,
+            project_dir=str(project_dir),
+        )
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise SystemExit(1)
+    except FileExistsError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise SystemExit(1)
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
         raise SystemExit(1)
 
-    allowed = presets[preset_name]["steps"]  # None = all steps
-
-    datasets_dir = project_dir / "datasets" / dataset
-    flows_dir = project_dir / "flows"
-    treatments_dir = project_dir / "treatments"
-
-    # Filter steps by preset
-    steps = [s for s in PIPELINE_STEPS if allowed is None or s["treatment"] in allowed]
-
-    flow_name = args.flow if args.flow else dataset.lower()
-    flow_path = flows_dir / f"{flow_name}.json"
-    flow_exists = flow_path.exists()
-
-    if flow_exists and not args.force:
-        print(f"Flow already exists: {flow_path}")
-        print(f"Use --force to regenerate it from preset '{preset_name}'.")
-        raise SystemExit(1)
-
-    if flow_exists and args.force:
-        answer = input(f"Overwrite {flow_path.name} with preset '{preset_name}'? [y/N] ").strip().lower()
-        if answer != "y":
-            print("Cancelled.")
-            raise SystemExit(0)
-
-    # Create pipeline stage directories (idempotent — safe if dirs already exist)
-    for s in steps:
-        for key in ("input", "output"):
-            if key in s and not s.get("external"):
-                (datasets_dir / s[key]).mkdir(parents=True, exist_ok=True)
-
-    # 00_raw: symlink to existing data or create empty
-    raw_dir = datasets_dir / "00_raw"
-    if args.raw:
-        raw_src = Path(args.raw).resolve()
-        if not raw_src.exists():
-            print(f"Error: --raw path does not exist: {raw_src}", file=sys.stderr)
-            raise SystemExit(1)
-        if raw_dir.exists() and not raw_dir.is_symlink():
-            raw_dir.rmdir()
-        if raw_dir.is_symlink():
-            raw_dir.unlink()
-        os.symlink(raw_src, raw_dir)
-
-    # Create treatments/ placeholder
-    treatments_dir.mkdir(parents=True, exist_ok=True)
-
-    # Generate flow with all params explicit
-    from pyperun.core.runner import TREATMENTS_ROOT
-
-    def _step_entry(s):
-        entry = {"treatment": s["treatment"], "input": s["input"]}
-        if "output" in s:
-            entry["output"] = s["output"]
-        t_path = TREATMENTS_ROOT / s["treatment"] / "treatment.json"
-        if t_path.exists():
-            with open(t_path) as f:
-                t = json.load(f)
-            params = {k: v["default"] for k, v in t.get("params", {}).items()}
-            if params:
-                entry["params"] = params
-        return entry
-
-    flow = {
-        "name": flow_name,
-        "description": f"Pipeline for dataset {dataset}",
-        "dataset": dataset,
-        "params": {},
-        "steps": [_step_entry(s) for s in steps],
-    }
-    flows_dir.mkdir(parents=True, exist_ok=True)
-    flow_path.write_text(json.dumps(flow, indent=4) + "\n")
-
-    # Print created structure
-    action = "Regenerated flow" if flow_exists else "Initialized project"
-    print(f"{action} at {project_dir}/  (preset: {preset_name})")
+    action = "Regenerated flow" if result["action"] == "regenerated" else "Initialized project"
+    print(f"{action} at {project_dir}/  (preset: {args.preset})")
     print()
     print(f"  flows/")
-    print(f"    {flow_name}.json")
+    print(f"    {result['flow']}.json")
     print(f"  treatments/              (custom treatments, optional)")
-    print(f"  datasets/{dataset}/")
-    seen = []
-    for s in steps:
-        for key in ("input", "output"):
-            stage = s.get(key)
-            if stage and stage not in seen and not s.get("external"):
-                seen.append(stage)
-    for stage in seen:
-        suffix = "  <- symlink" if stage == "00_raw" and args.raw else ""
+    print(f"  datasets/{result['dataset']}/")
+    for d in result["created_dirs"]:
+        stage = d.split("/")[-1]
+        suffix = "  <- symlink" if stage == "00_raw" and result["raw_symlink"] else ""
         print(f"    {stage}/{suffix}")
     print()
-    if args.raw:
-        print(f"  00_raw -> {Path(args.raw).resolve()}")
+    if result["raw_symlink"]:
+        print(f"  00_raw -> {result['raw_symlink']}")
         print()
-    edit_hint = "configure params" if preset_name == "full" else "configure columns, tz, aggregation window"
+    edit_hint = "configure params" if args.preset == "full" else "configure columns, tz, aggregation window"
     print("Next steps:")
-    print(f"  1. Edit flows/{flow_name}.json  ({edit_hint})")
-    print(f"  2. pyperun flow {flow_name}")
+    print(f"  1. Edit flows/{result['flow']}.json  ({edit_hint})")
+    print(f"  2. pyperun flow {result['flow']}")
 
 
 def cmd_delete(args, _parser):
-    import shutil
     from pathlib import Path
+    from pyperun.core.api import delete_dataset
     from pyperun.core.flow import get_flows_root
 
     dataset = args.dataset
     project_dir = Path(args.path).resolve() if args.path else Path.cwd()
 
+    # Preview before deleting
     dataset_dir = project_dir / "datasets" / dataset
-    flows_root = get_flows_root()
-
-    # Find flows referencing this dataset
-    flow_files = []
+    flows_root  = get_flows_root()
+    flow_files  = []
     for fp in sorted(flows_root.glob("*.json")):
         try:
             with open(fp) as f:
@@ -375,13 +324,11 @@ def cmd_delete(args, _parser):
         except Exception:
             pass
 
-    # Bail early if nothing to delete
     if not dataset_dir.exists() and not flow_files:
         print(f"Nothing found for dataset '{dataset}'.", file=sys.stderr)
         raise SystemExit(1)
 
-    # Show what will be deleted
-    print(f"Will delete:")
+    print("Will delete:")
     if dataset_dir.exists():
         raw_dir = dataset_dir / "00_raw"
         if raw_dir.is_symlink():
@@ -397,18 +344,16 @@ def cmd_delete(args, _parser):
             print("Cancelled.")
             return
 
-    # Delete dataset directory
-    if dataset_dir.exists():
-        raw_dir = dataset_dir / "00_raw"
-        if raw_dir.is_symlink():
-            raw_dir.unlink()
-        shutil.rmtree(dataset_dir)
-        print(f"Deleted datasets/{dataset}/")
+    try:
+        result = delete_dataset(dataset=dataset, project_dir=str(project_dir))
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        raise SystemExit(1)
 
-    # Delete flow files
-    for fp in flow_files:
-        fp.unlink()
-        print(f"Deleted flows/{fp.name}")
+    for d in result["deleted_dirs"]:
+        print(f"Deleted {d}")
+    for f in result["deleted_flows"]:
+        print(f"Deleted {f}")
 
 
 def _pyperun_version() -> str:
@@ -664,63 +609,33 @@ def cmd_upgrade(args, _parser):
     print("Done.")
 
 
-def cmd_status(_args, _parser):
-    from datetime import datetime
-    from pathlib import Path
-    from pyperun.core.flow import get_flows_root, _resolve_path
-    from pyperun.core.pipeline import DATASETS_PREFIX, PIPELINE_STEPS, resolve_paths
+def cmd_status(args, _parser):
+    from pyperun.core.api import get_status
 
-    external = {s["treatment"] for s in PIPELINE_STEPS if s.get("external")}
+    data = get_status()
 
-    flows = sorted(get_flows_root().glob("*.json"))
-    if not flows:
+    if args.format == "json":
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+        return
+
+    if not data:
         print("No flows found.")
         return
 
-    for flow_path in flows:
-        with open(flow_path) as f:
-            flow = json.load(f)
+    for entry in data:
+        name = entry["flow"]
+        dataset = entry["dataset"]
 
-        name = flow.get("name", flow_path.stem)
-        dataset = flow.get("dataset")
-        if not dataset:
+        if entry["status"] == "no-dataset":
             print(f"{name} (no dataset)")
             continue
 
         print(f"{name} ({dataset})")
+        for s in entry["steps"]:
+            last = s["last_modified"] or "-"
+            print(f"  {s['treatment']:<14s} {s['output']:<18s} {s['n_files']:>4d} files   last: {last}")
 
-        all_ok = True
-        for s in flow.get("steps", []):
-            treatment = s["treatment"]
-            if "output" in s:
-                out_dir = Path(_resolve_path(dataset, s["output"]))
-            else:
-                _, out_str = resolve_paths(dataset, treatment)
-                out_dir = Path(out_str)
-
-            out_name = out_dir.name
-
-            if out_dir.exists():
-                files = [f for f in out_dir.rglob("*") if f.is_file()]
-                n_files = len(files)
-                if files:
-                    last_mod = max(f.stat().st_mtime for f in files)
-                    last_date = datetime.fromtimestamp(last_mod).strftime("%Y-%m-%d")
-                else:
-                    last_date = "-"
-            else:
-                n_files = 0
-                last_date = "-"
-
-            if n_files == 0 and treatment not in external:
-                all_ok = False
-
-            print(f"  {treatment:<14s} {out_name:<18s} {n_files:>4d} files   last: {last_date}")
-
-        if all_ok:
-            print("  -> up-to-date")
-        else:
-            print("  -> incomplete")
+        print(f"  -> {entry['status']}")
         print()
 
 
@@ -751,6 +666,8 @@ def main():
     # pyperun describe
     p_describe = sub.add_parser("describe", help="Show description, input/output format and params of a treatment")
     p_describe.add_argument("treatment", help="Treatment name (e.g. parse, aggregate)")
+    p_describe.add_argument("--format", choices=["text", "json"], default="text",
+                            help="Output format (default: text)")
 
     # pyperun list
     p_list = sub.add_parser("list", help="List available flows, treatments, or steps")
@@ -758,6 +675,8 @@ def main():
                         help="What to list")
     p_list.add_argument("--flow", default=None,
                         help="Flow name (required for 'steps')")
+    p_list.add_argument("--format", choices=["text", "json"], default="text",
+                        help="Output format (default: text)")
 
     # pyperun init
     p_init = sub.add_parser("init", help="Initialize a new dataset project skeleton")
@@ -797,6 +716,8 @@ def main():
 
     # pyperun status
     p_status = sub.add_parser("status", help="Show status of all datasets")
+    p_status.add_argument("--format", choices=["text", "json"], default="text",
+                          help="Output format (default: text)")
 
     # pyperun upgrade
     p_upgrade = sub.add_parser("upgrade", help="Pull latest changes and reinstall pyperun")

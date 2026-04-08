@@ -12,6 +12,12 @@ LOG_PATH = Path("logs/pyperun.log")
 _REDACT_KEYS = {"password"}
 
 
+def new_run_id() -> str:
+    """Generate a short unique run identifier (8 hex chars)."""
+    import os
+    return os.urandom(4).hex()
+
+
 def log_event(
     treatment: str,
     status: str,
@@ -23,6 +29,7 @@ def log_event(
     time_to: str | None = None,
     params: dict | None = None,
     flow: str | None = None,
+    run_id: str | None = None,
 ) -> None:
     entry = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -31,6 +38,8 @@ def log_event(
         "input_dir": input_dir,
         "output_dir": output_dir,
     }
+    if run_id is not None:
+        entry["run_id"] = run_id
     if flow is not None:
         entry["flow"] = flow
     if time_from is not None:
