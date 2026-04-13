@@ -5,7 +5,7 @@ import io
 import json
 import re
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import timedelta
 from itertools import product
 from pathlib import Path
 
@@ -230,14 +230,17 @@ def _count_by_day(conn, table_name: str) -> dict[str, int]:
         return {}
 
 
-def _delete_day(conn, table_name: str, day: str) -> None:
-    """Delete all rows for a given UTC day from the table."""
-    d0 = date.fromisoformat(day)
-    d1 = d0 + timedelta(days=1)
+def _delete_day(conn, table_name: str, ts_min, ts_max) -> None:
+    """Delete all rows in [ts_min, ts_max] from the table.
+
+    Uses actual timestamps from the dataframe — avoids any UTC/local-day
+    mismatch that would arise from interpreting the parquet filename date
+    as UTC boundaries.
+    """
     with conn.cursor() as cur:
         cur.execute(
-            f'DELETE FROM "{table_name}" WHERE ts >= %s AND ts < %s',
-            (d0.isoformat(), d1.isoformat()),
+            f'DELETE FROM "{table_name}" WHERE ts >= %s AND ts <= %s',
+            (ts_min, ts_max),
         )
     conn.commit()
 
@@ -380,7 +383,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                     print(f"  [to_postgres]   added columns: {added}")
 
                 if mode == "append":
-                    _delete_day(conn, table_name, day)
+                    _delete_day(conn, table_name, df["ts"].min(), df["ts"].max())
 
                 rows = _copy_to_postgres(conn, table_name, df)
                 total_rows += rows
