@@ -218,18 +218,6 @@ def _ensure_columns(conn, table_name: str, df: pd.DataFrame) -> list[str]:
     return added
 
 
-def _get_max_ts(conn, table_name: str):
-    """Get MAX(ts) from the table, or None if empty/nonexistent."""
-    try:
-        with conn.cursor() as cur:
-            cur.execute(f'SELECT MAX(ts) FROM "{table_name}"')
-            row = cur.fetchone()
-            return row[0] if row else None
-    except psycopg2.errors.UndefinedTable:
-        conn.rollback()
-        return None
-
-
 def _copy_to_postgres(conn, table_name: str, df: pd.DataFrame) -> int:
     """Bulk insert via COPY FROM stdin (CSV). Returns number of rows copied."""
     if df.empty:
@@ -246,6 +234,67 @@ def _copy_to_postgres(conn, table_name: str, df: pd.DataFrame) -> int:
         cur.copy_expert(sql, buf)
     conn.commit()
     return len(df)
+
+
+def _upsert_from_staging(conn, table_name: str, df: pd.DataFrame) -> int:
+    """UPSERT df into table via a temporary staging table.
+
+    - Rows whose ts does not exist in the table: INSERT.
+    - Rows whose ts already exists: fill NULL columns using COALESCE
+      (existing non-NULL values are preserved, NULLs are filled from df).
+
+    Returns total rows affected (inserted + updated).
+    """
+    if df.empty:
+        return 0
+
+    staging = "_pyperun_stage"
+    data_cols = [c for c in df.columns if c != "ts"]
+    col_list = ", ".join(f'"{c}"' for c in df.columns)
+
+    # Temp staging table (dropped at end of transaction)
+    col_defs = ["ts TIMESTAMPTZ"] + [
+        f'"{c}" {_pg_type(df[c].dtype)}' for c in data_cols
+    ]
+    with conn.cursor() as cur:
+        cur.execute(f'DROP TABLE IF EXISTS "{staging}"')
+        cur.execute(f'CREATE TEMP TABLE "{staging}" ({", ".join(col_defs)})')
+
+    # Bulk copy new data to staging
+    buf = io.StringIO()
+    df.to_csv(buf, index=False, header=False, na_rep="")
+    buf.seek(0)
+    with conn.cursor() as cur:
+        cur.copy_expert(
+            f'COPY "{staging}" ({col_list}) FROM STDIN WITH (FORMAT csv, NULL \'\')',
+            buf,
+        )
+
+    # UPSERT: INSERT new ts rows; on conflict fill NULL columns only (COALESCE)
+    if data_cols:
+        set_clause = ", ".join(
+            f'"{c}" = COALESCE("{table_name}"."{c}", EXCLUDED."{c}")'
+            for c in data_cols
+        )
+        conflict_action = f"DO UPDATE SET {set_clause}"
+    else:
+        conflict_action = "DO NOTHING"
+
+    with conn.cursor() as cur:
+        cur.execute(f"""
+            INSERT INTO "{table_name}" ({col_list})
+            SELECT {col_list} FROM "{staging}"
+            ON CONFLICT (ts) {conflict_action}
+        """)
+        affected = cur.rowcount
+
+    conn.commit()
+
+    with conn.cursor() as cur:
+        cur.execute(f'DROP TABLE IF EXISTS "{staging}"')
+    conn.commit()
+
+    return affected
 
 
 def run(input_dir: str, output_dir: str, params: dict) -> None:
@@ -280,7 +329,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
         password=params["password"],
     )
 
-    stats = {"tables": 0, "columns_added": 0, "rows_inserted": 0}
+    stats = {"tables": 0, "columns_added": 0, "rows_upserted": 0}
     truncated_tables = set()
 
     try:
@@ -308,11 +357,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                     conn.rollback()
                 truncated_tables.add(table_name)
 
-            # Mode append: get max ts for filtering
-            max_ts = None
-            if mode == "append":
-                max_ts = _get_max_ts(conn, table_name)
-
             for day in sorted(days.keys()):
                 day_files = days[day]
                 df = _pivot_wide(day_files, sources)
@@ -323,19 +367,18 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                 _ensure_table(conn, table_name, df)
                 added = _ensure_columns(conn, table_name, df)
                 stats["columns_added"] += len(added)
-                stats["tables"] += 1  # counted per ensure_table call
+                stats["tables"] += 1
 
-                # Mode append: filter out already-inserted rows
-                if mode == "append" and max_ts is not None:
-                    df = df[df["ts"] > max_ts]
-                    if df.empty:
-                        continue
-
-                rows = _copy_to_postgres(conn, table_name, df)
-                stats["rows_inserted"] += rows
+                if mode == "append":
+                    # UPSERT: INSERT new timestamps, fill NULL columns for existing ones
+                    rows = _upsert_from_staging(conn, table_name, df)
+                else:
+                    # replace/reset: table already truncated/dropped, plain bulk insert
+                    rows = _copy_to_postgres(conn, table_name, df)
+                stats["rows_upserted"] += rows
 
         print(
-            f"  [to_postgres] Done: {stats['rows_inserted']} rows inserted, "
+            f"  [to_postgres] Done: {stats['rows_upserted']} rows upserted, "
             f"{stats['columns_added']} columns added"
         )
     finally:
