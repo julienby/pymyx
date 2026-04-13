@@ -376,7 +376,15 @@ def _git_version() -> str:
     import subprocess
     from pathlib import Path
 
-    repo = Path(__file__).resolve().parent.parent
+    # Walk up from __file__ to find the git repo root (works with editable installs)
+    repo = None
+    for parent in Path(__file__).resolve().parents:
+        if (parent / ".git").exists():
+            repo = parent
+            break
+    if repo is None:
+        return "unknown"
+
     try:
         commit = subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
@@ -386,17 +394,17 @@ def _git_version() -> str:
             ["git", "log", "-1", "--format=%ci"],
             cwd=repo, stderr=subprocess.DEVNULL, text=True,
         ).strip()[:10]  # YYYY-MM-DD
+    except Exception:
+        return "unknown"
+
+    try:
         tag = subprocess.check_output(
             ["git", "describe", "--tags", "--exact-match", "HEAD"],
             cwd=repo, stderr=subprocess.DEVNULL, text=True,
         ).strip()
         return f"{tag}  commit {commit}  ({date})"
-    except subprocess.CalledProcessError:
-        # No tag on this commit — show commit + date only
-        try:
-            return f"commit {commit}  ({date})"
-        except UnboundLocalError:
-            return "unknown"
+    except Exception:
+        return f"commit {commit}  ({date})"
 
 
 def cmd_export(args, _parser):
