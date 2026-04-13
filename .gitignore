@@ -22,6 +22,9 @@ PYPERUN_GUIDE.md
 # Exploration / comparaison (hors projet)
 comparaison/
 
+# Generated at install time
+pyperun/_git_info.json
+
 # Caches
 .pytest_cache/
 .ruff_cache/

@@ -371,12 +371,31 @@ def _pyperun_version() -> str:
         return "unknown"
 
 
+def _git_info_path() -> "Path":
+    from pathlib import Path
+    return Path(__file__).resolve().parent / "_git_info.json"
+
+
 def _git_version() -> str:
-    """Return a version string from git: tag (if any) + short commit + date."""
+    """Return a version string: reads _git_info.json (written by upgrade), falls back to git walk."""
     import subprocess
     from pathlib import Path
 
-    # Walk up from __file__ to find the git repo root (works with editable installs)
+    # Prefer baked-in info (set by pyperun upgrade — works for non-editable installs)
+    info_path = _git_info_path()
+    if info_path.exists():
+        try:
+            import json as _json
+            info = _json.loads(info_path.read_text())
+            commit = info.get("commit", "")
+            date = info.get("date", "")
+            tag = info.get("tag", "")
+            base = f"commit {commit}  ({date})" if commit else "unknown"
+            return f"{tag}  {base}" if tag else base
+        except Exception:
+            pass
+
+    # Fallback: walk up from __file__ to find the git repo (editable installs)
     repo = None
     for parent in Path(__file__).resolve().parents:
         if (parent / ".git").exists():
@@ -393,7 +412,7 @@ def _git_version() -> str:
         date = subprocess.check_output(
             ["git", "log", "-1", "--format=%ci"],
             cwd=repo, stderr=subprocess.DEVNULL, text=True,
-        ).strip()[:10]  # YYYY-MM-DD
+        ).strip()[:10]
     except Exception:
         return "unknown"
 
@@ -649,6 +668,29 @@ def cmd_upgrade(args, _parser):
     print("Reinstalling...")
     subprocess.run([sys.executable, "-m", "pip", "install", "--break-system-packages", "."],
                    cwd=project_dir, check=True)
+
+    # Bake git info into the installed package so --version works without the repo
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=project_dir, stderr=subprocess.DEVNULL, text=True,
+        ).strip()
+        date = subprocess.check_output(
+            ["git", "log", "-1", "--format=%ci"],
+            cwd=project_dir, stderr=subprocess.DEVNULL, text=True,
+        ).strip()[:10]
+        tag = ""
+        try:
+            tag = subprocess.check_output(
+                ["git", "describe", "--tags", "--exact-match", "HEAD"],
+                cwd=project_dir, stderr=subprocess.DEVNULL, text=True,
+            ).strip()
+        except subprocess.CalledProcessError:
+            pass
+        info = {"commit": commit, "date": date, "tag": tag}
+        _git_info_path().write_text(json.dumps(info))
+    except Exception:
+        pass
 
     print("Done.")
 
