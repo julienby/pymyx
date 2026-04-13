@@ -215,33 +215,26 @@ def _count_table(conn, table_name: str) -> int:
         return 0
 
 
-def _count_by_day(conn, table_name: str) -> dict[str, int]:
-    """Return {day_str: row_count} for every day present in the table."""
+def _count_range(conn, table_name: str, ts_min, ts_max) -> int:
+    """Count rows in [ts_min, ts_max]. Returns 0 if table does not exist."""
     try:
         with conn.cursor() as cur:
-            cur.execute(f"""
-                SELECT (ts AT TIME ZONE 'UTC')::date::text, COUNT(*)
-                FROM "{table_name}"
-                GROUP BY 1
-            """)
-            return {row[0]: row[1] for row in cur.fetchall()}
+            cur.execute(
+                f'SELECT COUNT(*) FROM "{table_name}" WHERE ts >= %s AND ts <= %s',
+                (ts_min, ts_max),
+            )
+            return cur.fetchone()[0]
     except psycopg2.errors.UndefinedTable:
         conn.rollback()
-        return {}
+        return 0
 
 
-def _delete_day(conn, table_name: str, day: str) -> None:
-    """Delete all rows whose UTC date matches `day` (YYYY-MM-DD).
-
-    Uses the full calendar day boundary so that any rows previously inserted
-    by an older version of this treatment (with different timestamp coverage)
-    are fully removed before re-inserting.
-    """
+def _delete_day(conn, table_name: str, ts_min, ts_max) -> None:
+    """Delete all rows in [ts_min, ts_max] from the table."""
     with conn.cursor() as cur:
         cur.execute(
-            f"""DELETE FROM "{table_name}"
-                WHERE ts >= %s::date AND ts < (%s::date + INTERVAL '1 day')""",
-            (day, day),
+            f'DELETE FROM "{table_name}" WHERE ts >= %s AND ts <= %s',
+            (ts_min, ts_max),
         )
     conn.commit()
 
@@ -250,7 +243,7 @@ def _sources_changed(day_files: list[Path], day_stats: dict) -> bool:
     """Return True if any source parquet changed, appeared, or disappeared.
 
     Comparison uses row count from parquet footer metadata (fast, no data read).
-    day_stats keys: device_id → row_count, plus "db_rows" (ignored here).
+    day_stats keys: device_id → row_count, plus "db_rows", "ts_min", "ts_max" (ignored here).
     """
     current = {
         parse_parquet_path(f).device_id: pq.read_metadata(f).num_rows
@@ -261,8 +254,9 @@ def _sources_changed(day_files: list[Path], day_stats: dict) -> bool:
         if day_stats.get(device_id) != n_rows:
             return True
     # Disappeared file
+    _meta_keys = {"db_rows", "ts_min", "ts_max"}
     for key in day_stats:
-        if key != "db_rows" and key not in current:
+        if key not in _meta_keys and key not in current:
             return True
     return False
 
@@ -352,10 +346,16 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                         f"  [to_postgres]   DB count mismatch "
                         f"({db_total} in DB vs {expected_total} expected) — checking by day"
                     )
-                    db_per_day = _count_by_day(conn, table_name)
                     for day in days:
-                        expected_rows = table_stats.get(day, {}).get("db_rows", 0)
-                        if db_per_day.get(day, 0) != expected_rows:
+                        day_stats = table_stats.get(day, {})
+                        ts_min_s = day_stats.get("ts_min")
+                        ts_max_s = day_stats.get("ts_max")
+                        if ts_min_s is None or ts_max_s is None:
+                            # No stored bounds → first time, replay to populate them
+                            days_to_replay.add(day)
+                            continue
+                        expected_rows = day_stats.get("db_rows", 0)
+                        if _count_range(conn, table_name, ts_min_s, ts_max_s) != expected_rows:
                             days_to_replay.add(day)
 
                 # Phase 2 — parquet footer read per file (no data read, ~0.1 ms/file)
@@ -383,15 +383,22 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                 if added:
                     print(f"  [to_postgres]   added columns: {added}")
 
+                ts_min = df["ts"].min()
+                ts_max = df["ts"].max()
+
                 if mode == "append":
-                    _delete_day(conn, table_name, day)
+                    _delete_day(conn, table_name, ts_min, ts_max)
 
                 rows = _copy_to_postgres(conn, table_name, df)
                 total_rows += rows
                 total_days += 1
 
-                # Update stats for this day
-                day_entry: dict = {"db_rows": rows}
+                # Update stats for this day (ts_min/ts_max used for future integrity checks)
+                day_entry: dict = {
+                    "db_rows": rows,
+                    "ts_min": ts_min.isoformat(),
+                    "ts_max": ts_max.isoformat(),
+                }
                 for f in day_files:
                     device_id = parse_parquet_path(f).device_id
                     day_entry[device_id] = pq.read_metadata(f).num_rows
