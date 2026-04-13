@@ -141,6 +141,7 @@ def run_flow(
     step: str | None = None,
     dry_run: bool = False,
     run_id: str | None = None,
+    params_override: dict | None = None,
 ) -> str:
     flow_path = _find_flow(name)
 
@@ -249,6 +250,8 @@ def run_flow(
         input_dir = s["input"]
         output_dir = s.get("output", "")
         params = s.get("params", {})
+        if params_override:
+            params = {**params, **params_override}
 
         # Per-step time range: step-level from/to overrides flow-level (funnel).
         # External steps manage their own state (e.g. max_ts in DB) — no time filter.

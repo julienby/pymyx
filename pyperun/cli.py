@@ -59,10 +59,17 @@ def cmd_flow(args, parser):
 
     time_from, time_to = _validate_common_args(parser, args)
 
+    params_override = None
+    if args.params:
+        try:
+            params_override = json.loads(args.params)
+        except json.JSONDecodeError as e:
+            parser.error(f"--params: invalid JSON: {e}")
+
     run_flow(args.flow, time_from=time_from, time_to=time_to,
              output_mode=args.output_mode, last=args.last,
              from_step=args.from_step, to_step=args.to_step, step=args.step,
-             dry_run=args.dry_run)
+             dry_run=args.dry_run, params_override=params_override)
 
 
 def cmd_new(args, _parser):
@@ -523,6 +530,7 @@ Commands:
     --output-mode                 append | replace | full-replace
     --last                        Incremental: process only new data
     --dry-run                     Print execution plan without running
+    --params <JSON>               Override params for every step (e.g. '{"mode": "reset"}')
 
   pyperun new <name>              Scaffold a new treatment (treatment.json + run.py)
 
@@ -657,6 +665,8 @@ def main():
                         help="Run a single step from the flow")
     p_flow.add_argument("--dry-run", action="store_true",
                         help="Print the execution plan without running anything")
+    p_flow.add_argument("--params", default=None, metavar="JSON",
+                        help="JSON object of params to override for every step (e.g. '{\"mode\": \"reset\"}')")
     _add_common_args(p_flow)
 
     # pyperun new
