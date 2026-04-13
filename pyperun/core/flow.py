@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from pyperun.core.logger import new_run_id
-from pyperun.core.pipeline import DATASETS_PREFIX, resolve_paths
+from pyperun.core.pipeline import DATASETS_PREFIX, is_external, resolve_paths
 from pyperun.core.runner import run_treatment
 from pyperun.core.timefilter import parse_iso_utc, resolve_last_range
 
@@ -224,10 +224,18 @@ def run_flow(
                 Path(first["input"]), Path(first["output"])
             )
         except ValueError as exc:
-            print(f"[flow] {exc}")
-            return
-        if time_from is not None:
-            print(f"[flow] --last resolved to {time_from.isoformat()} .. {time_to.isoformat()}")
+            # Pipeline is up-to-date. External steps manage their own state
+            # (e.g. to_postgres uses max_ts from DB) — run them without time filter.
+            external_steps = [s for s in steps if is_external(s["treatment"])]
+            if not external_steps:
+                print(f"[flow] {exc}")
+                return
+            print(f"[flow] pipeline up-to-date, running {len(external_steps)} external step(s)")
+            steps = external_steps
+            time_from = time_to = None
+        else:
+            if time_from is not None:
+                print(f"[flow] --last resolved to {time_from.isoformat()} .. {time_to.isoformat()}")
 
     if dry_run:
         _print_dry_run(name, steps, time_from, time_to, last)
@@ -242,9 +250,14 @@ def run_flow(
         output_dir = s.get("output", "")
         params = s.get("params", {})
 
-        # Per-step time range: step-level from/to overrides flow-level (funnel)
-        step_time_from = s.get("_time_from", time_from)
-        step_time_to = s.get("_time_to", time_to)
+        # Per-step time range: step-level from/to overrides flow-level (funnel).
+        # External steps manage their own state (e.g. max_ts in DB) — no time filter.
+        if is_external(treatment):
+            step_time_from = None
+            step_time_to = None
+        else:
+            step_time_from = s.get("_time_from", time_from)
+            step_time_to = s.get("_time_to", time_to)
 
         print(f"[flow] Step {i}/{len(steps)}: {treatment}")
         try:

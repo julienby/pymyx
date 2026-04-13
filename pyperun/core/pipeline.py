@@ -18,6 +18,11 @@ PIPELINE_STEPS = [
 _STEP_BY_NAME = {s["treatment"]: s for s in PIPELINE_STEPS}
 
 
+def is_external(treatment: str) -> bool:
+    """Return True if the treatment writes to an external service (not disk)."""
+    return _STEP_BY_NAME.get(treatment, {}).get("external", False)
+
+
 def resolve_paths(dataset: str, treatment: str) -> tuple[str, str]:
     """Return (input_dir, output_dir) for a treatment within a dataset."""
     step = _STEP_BY_NAME.get(treatment)
