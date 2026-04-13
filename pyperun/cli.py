@@ -371,6 +371,34 @@ def _pyperun_version() -> str:
         return "unknown"
 
 
+def _git_version() -> str:
+    """Return a version string from git: tag (if any) + short commit + date."""
+    import subprocess
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parent.parent
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=repo, stderr=subprocess.DEVNULL, text=True,
+        ).strip()
+        date = subprocess.check_output(
+            ["git", "log", "-1", "--format=%ci"],
+            cwd=repo, stderr=subprocess.DEVNULL, text=True,
+        ).strip()[:10]  # YYYY-MM-DD
+        tag = subprocess.check_output(
+            ["git", "describe", "--tags", "--exact-match", "HEAD"],
+            cwd=repo, stderr=subprocess.DEVNULL, text=True,
+        ).strip()
+        return f"{tag}  commit {commit}  ({date})"
+    except subprocess.CalledProcessError:
+        # No tag on this commit — show commit + date only
+        try:
+            return f"commit {commit}  ({date})"
+        except UnboundLocalError:
+            return "unknown"
+
+
 def cmd_export(args, _parser):
     import io
     import tarfile
@@ -737,7 +765,13 @@ def main():
     # pyperun help
     p_help = sub.add_parser("help", help="Show detailed help for all commands")
 
+    parser.add_argument("--version", action="store_true", help="Show version and exit")
+
     args = parser.parse_args()
+
+    if args.version:
+        print(f"pyperun {_git_version()}")
+        raise SystemExit(0)
 
     if args.command is None:
         parser.print_help()
