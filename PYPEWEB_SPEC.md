@@ -83,7 +83,7 @@ Tailwind CSS      via CDN pour démarrer, puis build (npm) pour la prod
 
 ---
 
-## Étape 1 : pypeweb-monitor (scope du stagiaire)
+## Étape 1 : pypeweb-monitor
 
 Démarrer par le niveau le plus simple — **lecture seule**. Aucune action d'écriture.
 
@@ -325,7 +325,7 @@ Retourne `{run_id, status, n_steps_done, error}`.
 
 ---
 
-## Ce que le stagiaire doit livrer pour pypeweb-monitor
+## Livrable pypeweb-monitor
 
 - [ ] Repo `pypeweb-monitor` avec structure ci-dessus
 - [ ] `pyperun_client.py` fonctionnel (configuré via env vars)
