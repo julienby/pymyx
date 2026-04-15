@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PYPEWEB // MISSION LOG</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Space Mono', monospace; box-sizing: border-box; }
+    body { background: #050505; color: #c8c8c8; min-height: 100vh; }
+    .display { font-family: 'Orbitron', sans-serif; }
+    .blink { animation: blink 1.4s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .scanline { background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,229,255,0.012) 3px, rgba(0,229,255,0.012) 4px); pointer-events: none; position: fixed; inset: 0; z-index: 100; }
+    .glow-c { color: #00e5ff; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
+    .glow-g { color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+    .glow-r { color: #ff3b30; text-shadow: 0 0 10px rgba(255,59,48,0.5); }
+    a { text-decoration: none; transition: color 0.2s; }
+    a:hover { color: #00e5ff; }
+    .row:hover { background: rgba(0,229,255,0.025); }
+    .progress-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  </style>
+</head>
+<body>
+  <div class="scanline"></div>
+
+  <header style="border-bottom:1px solid #1a1a1a; padding:12px 24px; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <span class="display glow-c" style="font-size:14px; letter-spacing:0.2em; font-weight:900;">PYPEWEB</span>
+      <span style="color:#333; font-size:11px; letter-spacing:0.3em;">// MISSION CONTROL</span>
+    </div>
+    <nav style="display:flex; gap:32px; font-size:11px; letter-spacing:0.25em;">
+      <a href="status.html" style="color:#444;">STATUS</a>
+      <a href="runs.html" class="glow-c">RUNS</a>
+      <a href="run_detail.html" style="color:#444;">TELEMETRY</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:12px; font-size:11px; color:#444;">
+      <span class="blink" style="color:#00ff88;">●</span>
+      <span>SYS NOMINAL</span>
+      <span style="color:#2a2a2a;">|</span>
+      <span>2026-04-15 // 09:41:07Z</span>
+    </div>
+  </header>
+
+  <main style="padding:24px;">
+
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+      <span class="display" style="font-size:10px; letter-spacing:0.5em; color:#444;">MISSION LOG</span>
+      <div style="flex:1; height:1px; background:#1a1a1a;"></div>
+      <span style="font-size:10px; color:#444; letter-spacing:0.2em;">5 ENTRIES</span>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px;">
+      <div style="border:1px solid #1a1a1a; padding:14px;">
+        <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">TOTAL RUNS</div>
+        <div class="display glow-c" style="font-size:22px; font-weight:700;">5</div>
+      </div>
+      <div style="border:1px solid #1a1a1a; padding:14px;">
+        <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">SUCCESS RATE</div>
+        <div class="display glow-g" style="font-size:22px; font-weight:700;">80%</div>
+      </div>
+      <div style="border:1px solid #1a1a1a; padding:14px;">
+        <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">ANOMALIES</div>
+        <div class="display glow-r" style="font-size:22px; font-weight:700;">1</div>
+      </div>
+      <div style="border:1px solid #1a1a1a; padding:14px;">
+        <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">AVG DURATION</div>
+        <div class="display" style="font-size:22px; font-weight:700; color:#c8c8c8;">4m 51s</div>
+      </div>
+    </div>
+
+    <!-- Table header -->
+    <div style="display:grid; grid-template-columns:1.2fr 1.8fr 2fr 1.2fr 1fr 1fr 0.8fr; font-size:10px; color:#444; letter-spacing:0.35em; padding:8px 12px; border-bottom:1px solid #1a1a1a; margin-bottom:4px;">
+      <span>RUN ID</span>
+      <span>FLOW</span>
+      <span>TIMESTAMP</span>
+      <span>STATUS</span>
+      <span>STEPS</span>
+      <span>DURATION</span>
+      <span></span>
+    </div>
+
+    <!-- Runs -->
+    <div style="display:flex; flex-direction:column; gap:2px;">
+
+      <!-- Run 1 — success -->
+      <div class="row" style="display:grid; grid-template-columns:1.2fr 1.8fr 2fr 1.2fr 1fr 1fr 0.8fr; font-size:11px; align-items:center; padding:10px 12px; border:1px solid transparent; cursor:pointer;" onclick="location.href='run_detail.html'">
+        <span class="glow-c" style="font-size:10px;">a3f9b2c1</span>
+        <span style="color:#888;">valvometry-daily</span>
+        <span style="color:#666;">2026-04-15 08:32:14Z</span>
+        <span class="glow-g" style="font-size:10px; font-weight:700; letter-spacing:0.2em;">● SUCCESS</span>
+        <span>9<span style="color:#444;">/9</span></span>
+        <span style="color:#888;">4m 23s</span>
+        <a href="run_detail.html" class="glow-c" style="font-size:10px; letter-spacing:0.2em;">→</a>
+      </div>
+
+      <!-- Run 2 — error -->
+      <div class="row" style="display:grid; grid-template-columns:1.2fr 1.8fr 2fr 1.2fr 1fr 1fr 0.8fr; font-size:11px; align-items:center; padding:10px 12px; border:1px solid rgba(255,59,48,0.15); background:rgba(255,59,48,0.02); cursor:pointer;" onclick="location.href='run_detail.html'">
+        <span class="glow-c" style="font-size:10px;">b7e2d4f0</span>
+        <span style="color:#888;">stab-dreissene</span>
+        <span style="color:#666;">2026-04-15 07:15:01Z</span>
+        <span class="glow-r" style="font-size:10px; font-weight:700; letter-spacing:0.2em;">● ANOMALY</span>
+        <span>2<span style="color:#444;">/9</span></span>
+        <span style="color:#888;">13s</span>
+        <a href="run_detail.html" class="glow-c" style="font-size:10px; letter-spacing:0.2em;">→</a>
+      </div>
+
+      <!-- Run 3 — success -->
+      <div class="row" style="display:grid; grid-template-columns:1.2fr 1.8fr 2fr 1.2fr 1fr 1fr 0.8fr; font-size:11px; align-items:center; padding:10px 12px; border:1px solid transparent; cursor:pointer;">
+        <span class="glow-c" style="font-size:10px;">c9a1b3e2</span>
+        <span style="color:#888;">valvometry-daily</span>
+        <span style="color:#666;">2026-04-14 08:31:55Z</span>
+        <span class="glow-g" style="font-size:10px; font-weight:700; letter-spacing:0.2em;">● SUCCESS</span>
+        <span>9<span style="color:#444;">/9</span></span>
+        <span style="color:#888;">4m 11s</span>
+        <span class="glow-c" style="font-size:10px;">→</span>
+      </div>
+
+      <!-- Run 4 — success -->
+      <div class="row" style="display:grid; grid-template-columns:1.2fr 1.8fr 2fr 1.2fr 1fr 1fr 0.8fr; font-size:11px; align-items:center; padding:10px 12px; border:1px solid transparent; cursor:pointer;">
+        <span class="glow-c" style="font-size:10px;">d4f0e1c3</span>
+        <span style="color:#888;">valvometry-daily</span>
+        <span style="color:#666;">2026-04-13 08:30:22Z</span>
+        <span class="glow-g" style="font-size:10px; font-weight:700; letter-spacing:0.2em;">● SUCCESS</span>
+        <span>9<span style="color:#444;">/9</span></span>
+        <span style="color:#888;">4m 45s</span>
+        <span class="glow-c" style="font-size:10px;">→</span>
+      </div>
+
+      <!-- Run 5 — success -->
+      <div class="row" style="display:grid; grid-template-columns:1.2fr 1.8fr 2fr 1.2fr 1fr 1fr 0.8fr; font-size:11px; align-items:center; padding:10px 12px; border:1px solid transparent; cursor:pointer;">
+        <span class="glow-c" style="font-size:10px;">e5a2b3d4</span>
+        <span style="color:#888;">stab-dreissene</span>
+        <span style="color:#666;">2026-04-10 14:22:08Z</span>
+        <span class="glow-g" style="font-size:10px; font-weight:700; letter-spacing:0.2em;">● SUCCESS</span>
+        <span>9<span style="color:#444;">/9</span></span>
+        <span style="color:#888;">6m 52s</span>
+        <span class="glow-c" style="font-size:10px;">→</span>
+      </div>
+    </div>
+
+    <div style="margin-top:32px; padding-top:16px; border-top:1px solid #111; display:flex; justify-content:space-between; font-size:10px; color:#333; letter-spacing:0.2em;">
+      <span>PYPERUN API // localhost:5000 // <span class="blink" style="color:#00ff88;">●</span> CONNECTED</span>
+      <span>PYPEWEB v0.1.0-alpha // 2026</span>
+    </div>
+  </main>
+</body>
+</html>

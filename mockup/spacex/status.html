@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PYPEWEB // MISSION CONTROL</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Space Mono', monospace; box-sizing: border-box; }
+    body { background: #050505; color: #c8c8c8; min-height: 100vh; }
+    .display { font-family: 'Orbitron', sans-serif; }
+    .blink { animation: blink 1.4s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .scanline {
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,229,255,0.012) 3px, rgba(0,229,255,0.012) 4px);
+      pointer-events: none; position: fixed; inset: 0; z-index: 100;
+    }
+    .glow-c { color: #00e5ff; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
+    .glow-g { color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+    .glow-r { color: #ff3b30; text-shadow: 0 0 10px rgba(255,59,48,0.5); }
+    a { text-decoration: none; transition: color 0.2s; }
+    a:hover { color: #00e5ff; }
+    .bar { height: 2px; background: #1a1a1a; }
+    .bar-fill { height: 100%; transition: width 0.5s; }
+  </style>
+</head>
+<body>
+  <div class="scanline"></div>
+
+  <!-- Top bar -->
+  <header style="border-bottom: 1px solid #1a1a1a; padding: 12px 24px; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <span class="display glow-c" style="font-size:14px; letter-spacing:0.2em; font-weight:900;">PYPEWEB</span>
+      <span style="color:#333; font-size:11px; letter-spacing:0.3em;">// MISSION CONTROL</span>
+    </div>
+    <nav style="display:flex; gap:32px; font-size:11px; letter-spacing:0.25em;">
+      <a href="status.html" class="glow-c">STATUS</a>
+      <a href="runs.html" style="color:#444;">RUNS</a>
+      <a href="run_detail.html" style="color:#444;">TELEMETRY</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:12px; font-size:11px; color:#444;">
+      <span class="blink" style="color:#00ff88;">●</span>
+      <span>SYS NOMINAL</span>
+      <span style="color:#2a2a2a;">|</span>
+      <span>2026-04-15 // 09:41:07Z</span>
+    </div>
+  </header>
+
+  <main style="padding:24px;">
+
+    <!-- Section label -->
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+      <span class="display" style="font-size:10px; letter-spacing:0.5em; color:#444;">PIPELINE STATUS</span>
+      <div style="flex:1; height:1px; background:#1a1a1a;"></div>
+      <span style="font-size:10px; color:#444; letter-spacing:0.2em;">2 FLOWS // 1 NOMINAL // 1 ANOMALY</span>
+    </div>
+
+    <!-- Flows -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <!-- FLOW 1 — NOMINAL -->
+      <div style="border:1px solid rgba(0,255,136,0.25); padding:20px; background:rgba(0,255,136,0.015);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+          <div>
+            <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:4px;">FLOW IDENTIFIER</div>
+            <div class="display" style="font-size:12px; letter-spacing:0.15em; color:#e0e0e0;">VALVOMETRY-DAILY</div>
+            <div style="font-size:10px; color:#555; margin-top:4px; letter-spacing:0.2em;">DATASET // VALVO-2026</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+              <span class="blink" style="color:#00ff88; font-size:12px;">●</span>
+              <span class="glow-g display" style="font-size:11px; letter-spacing:0.2em;">NOMINAL</span>
+            </div>
+            <div style="font-size:10px; color:#444; margin-top:6px;">LAST RUN: 08:32Z</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #1a1a1a; padding-top:16px;">
+          <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:10px; color:#444; letter-spacing:0.3em; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #111;">
+            <span>STAGE</span><span style="text-align:right;">FILES</span><span style="text-align:right;">LAST MOD</span><span style="text-align:right;">ST</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:7px;">
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">01 // PARSE</span><span style="text-align:right;">47</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">02 // CLEAN</span><span style="text-align:right;">47</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">03 // RESAMPLE</span><span style="text-align:right;">47</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">04 // TRANSFORM</span><span style="text-align:right;">47</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">05 // NORMALIZE</span><span style="text-align:right;">47</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">06 // AGGREGATE</span><span style="text-align:right;">188</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">07 // TO_POSTGRES</span><span style="text-align:right; color:#444;">—</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-c" style="text-align:right; font-size:10px; font-weight:700;">EXT</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">08 // EXPORTCSV</span><span style="text-align:right;">12</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">09 // EXPORTPARQUET</span><span style="text-align:right;">12</span><span style="text-align:right; color:#555;">2026-04-14</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="bar"><div class="bar-fill" style="width:100%; background:rgba(0,255,136,0.5);"></div></div>
+          <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:10px; color:#444;">
+            <span>9/9 STAGES COMPLETE</span>
+            <a href="runs.html" class="glow-c" style="letter-spacing:0.2em;">→ MISSION LOG</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLOW 2 — ANOMALY -->
+      <div style="border:1px solid rgba(255,59,48,0.3); padding:20px; background:rgba(255,59,48,0.018);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+          <div>
+            <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:4px;">FLOW IDENTIFIER</div>
+            <div class="display" style="font-size:12px; letter-spacing:0.15em; color:#e0e0e0;">STAB-DREISSENE</div>
+            <div style="font-size:10px; color:#555; margin-top:4px; letter-spacing:0.2em;">DATASET // STAB-2026</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+              <span style="color:#ff3b30; font-size:12px;">●</span>
+              <span class="glow-r display" style="font-size:11px; letter-spacing:0.2em;">ANOMALY</span>
+            </div>
+            <div style="font-size:10px; color:#444; margin-top:6px;">LAST RUN: 07:15Z</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #1a1a1a; padding-top:16px;">
+          <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:10px; color:#444; letter-spacing:0.3em; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #111;">
+            <span>STAGE</span><span style="text-align:right;">FILES</span><span style="text-align:right;">LAST MOD</span><span style="text-align:right;">ST</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:7px;">
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">01 // PARSE</span><span style="text-align:right;">23</span><span style="text-align:right; color:#555;">2026-04-10</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center;">
+              <span style="color:#777;">02 // CLEAN</span><span style="text-align:right;">23</span><span style="text-align:right; color:#555;">2026-04-10</span><span class="glow-g" style="text-align:right; font-size:10px; font-weight:700;">OK</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center; background:rgba(255,59,48,0.05); margin: 0 -4px; padding: 3px 4px;">
+              <span style="color:#ff6b64;">03 // RESAMPLE</span><span style="text-align:right; color:#444;">0</span><span style="text-align:right; color:#444;">—</span><span class="glow-r" style="text-align:right; font-size:10px; font-weight:700;">FAIL</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center; opacity:0.3;">
+              <span style="color:#555;">04 // TRANSFORM</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; font-size:10px; color:#333;">N/A</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center; opacity:0.3;">
+              <span style="color:#555;">05 // NORMALIZE</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; font-size:10px; color:#333;">N/A</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center; opacity:0.3;">
+              <span style="color:#555;">06 // AGGREGATE</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; font-size:10px; color:#333;">N/A</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center; opacity:0.3;">
+              <span style="color:#555;">07 // TO_POSTGRES</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; font-size:10px; color:#333;">N/A</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center; opacity:0.3;">
+              <span style="color:#555;">08 // EXPORTCSV</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; font-size:10px; color:#333;">N/A</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2.5fr 0.8fr 1.2fr 0.8fr; font-size:11px; align-items:center; opacity:0.3;">
+              <span style="color:#555;">09 // EXPORTPARQUET</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; color:#333;">—</span><span style="text-align:right; font-size:10px; color:#333;">N/A</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="bar"><div class="bar-fill" style="width:22%; background:rgba(255,59,48,0.6);"></div></div>
+          <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:10px;">
+            <span class="glow-r">ABORT AT RESAMPLE // 2/9</span>
+            <a href="run_detail.html" class="glow-c" style="letter-spacing:0.2em;">→ TELEMETRY</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top:32px; padding-top:16px; border-top:1px solid #111; display:flex; justify-content:space-between; font-size:10px; color:#333; letter-spacing:0.2em;">
+      <span>PYPERUN API // localhost:5000 // <span class="blink" style="color:#00ff88;">●</span> CONNECTED</span>
+      <span>PYPEWEB v0.1.0-alpha // 2026</span>
+    </div>
+  </main>
+</body>
+</html>

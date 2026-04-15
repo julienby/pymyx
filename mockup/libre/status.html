@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pypeweb — Status</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e1117;
+      --surface: #161b27;
+      --surface2: #1c2333;
+      --border: #232d3f;
+      --accent: #38bdf8;
+      --green: #4ade80;
+      --red: #f87171;
+      --amber: #fbbf24;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --dim: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; min-height: 100vh; display: flex; }
+    .syne { font-family: 'Syne', sans-serif; }
+    a { text-decoration: none; color: var(--accent); transition: opacity 0.15s; }
+    a:hover { opacity: 0.8; }
+
+    /* Sidebar */
+    aside { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; }
+    .logo { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+    .logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: -0.3px; }
+    .logo-sub { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.1em; }
+    nav { padding: 16px 12px; flex: 1; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); cursor: pointer; margin-bottom: 2px; transition: all 0.15s; }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(56,189,248,0.1); color: var(--accent); }
+    .nav-icon { width: 16px; text-align: center; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; box-shadow: 0 0 6px rgba(74,222,128,0.6); }
+
+    /* Main */
+    main { margin-left: 220px; flex: 1; padding: 32px 36px; min-height: 100vh; }
+    .page-header { margin-bottom: 28px; }
+    .page-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .page-sub { font-size: 12px; color: var(--muted); }
+
+    /* Cards */
+    .flow-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px; transition: border-color 0.2s; }
+    .flow-card:hover { border-color: var(--dim); }
+    .flow-card.has-error { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.02); }
+
+    /* Step table */
+    .step-row { display: grid; grid-template-columns: 30px 1.4fr 70px 110px 80px; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .step-row:last-child { border-bottom: none; }
+    .step-idx { font-size: 10px; color: var(--dim); text-align: center; }
+    .tag { font-size: 10px; font-weight: 500; border-radius: 4px; padding: 2px 7px; font-family: 'IBM Plex Mono', monospace; }
+    .tag-ok { background: rgba(74,222,128,0.1); color: var(--green); }
+    .tag-err { background: rgba(248,113,113,0.12); color: var(--red); }
+    .tag-ext { background: rgba(56,189,248,0.1); color: var(--accent); }
+    .tag-na { background: var(--surface2); color: var(--dim); }
+
+    /* Progress */
+    .prog-track { height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 14px; }
+    .prog-fill { height: 100%; border-radius: 99px; }
+
+    /* Stats bar */
+    .stats-bar { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .stat-val { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 3px; }
+    .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="logo">
+      <div class="logo-text">pypeweb</div>
+      <div class="logo-sub">pipeline monitor</div>
+    </div>
+    <nav>
+      <a href="status.html">
+        <div class="nav-item active">
+          <span class="nav-icon">◈</span>
+          <span>Status</span>
+        </div>
+      </a>
+      <a href="runs.html" style="color:inherit;">
+        <div class="nav-item">
+          <span class="nav-icon">▷</span>
+          <span>Runs</span>
+        </div>
+      </a>
+      <div class="nav-item" style="opacity:0.4; cursor:not-allowed;">
+        <span class="nav-icon">◷</span>
+        <span>Schedule</span>
+        <span style="font-size:9px; margin-left:auto; color:var(--dim);">soon</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div><span class="status-dot"></span>localhost:5000</div>
+      <div style="margin-top:6px; color:var(--dim);">v0.1.0-alpha</div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main>
+    <div class="page-header">
+      <div class="page-title syne">Pipeline Status</div>
+      <div class="page-sub">Updated 2026-04-15 09:41:07 UTC · 2 flows</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-val" style="color: var(--accent);">2</div>
+        <div class="stat-label">Total flows</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color: var(--green);">1</div>
+        <div class="stat-label">Up-to-date</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color: var(--red);">1</div>
+        <div class="stat-label">Incomplete</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color: var(--text);">4m 23s</div>
+        <div class="stat-label">Last run duration</div>
+      </div>
+    </div>
+
+    <!-- Flow 1 -->
+    <div class="flow-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+        <div>
+          <div class="syne" style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:3px;">valvometry-daily</div>
+          <div style="font-size:11px; color:var(--muted);">VALVO-2026 · last run today 08:32 · <a href="runs.html">4 runs this week</a></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="tag tag-ok" style="font-size:11px; padding:4px 10px;">● up-to-date</span>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:14px;">
+        <div style="display:grid; grid-template-columns:30px 1.4fr 70px 110px 80px; gap:12px; font-size:10px; color:var(--muted); padding-bottom:8px; border-bottom:1px solid var(--border); letter-spacing:0.08em; text-transform:uppercase;">
+          <span></span><span>Stage</span><span style="text-align:right;">Files</span><span style="text-align:right;">Last mod</span><span style="text-align:right;">Status</span>
+        </div>
+        <div class="step-row"><span class="step-idx">01</span><span style="color:var(--text);">parse</span><span style="text-align:right; color:var(--text);">47</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">02</span><span style="color:var(--text);">clean</span><span style="text-align:right; color:var(--text);">47</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">03</span><span style="color:var(--text);">resample</span><span style="text-align:right; color:var(--text);">47</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">04</span><span style="color:var(--text);">transform</span><span style="text-align:right; color:var(--text);">47</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">05</span><span style="color:var(--text);">normalize</span><span style="text-align:right; color:var(--text);">47</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">06</span><span style="color:var(--text);">aggregate</span><span style="text-align:right; color:var(--text);">188</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">07</span><span style="color:var(--muted);">to_postgres</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ext">ext</span></span></div>
+        <div class="step-row"><span class="step-idx">08</span><span style="color:var(--text);">exportcsv</span><span style="text-align:right; color:var(--text);">12</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">09</span><span style="color:var(--text);">exportparquet</span><span style="text-align:right; color:var(--text);">12</span><span style="text-align:right; color:var(--muted);">2026-04-14</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+      </div>
+      <div class="prog-track"><div class="prog-fill" style="width:100%; background:var(--green);"></div></div>
+      <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
+        <span>9 / 9 complete</span>
+        <a href="runs.html">history →</a>
+      </div>
+    </div>
+
+    <!-- Flow 2 -->
+    <div class="flow-card has-error">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
+        <div>
+          <div class="syne" style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:3px;">stab-dreissene</div>
+          <div style="font-size:11px; color:var(--muted);">STAB-2026 · last run today 07:15 · <a href="runs.html">1 error today</a></div>
+        </div>
+        <span class="tag tag-err" style="font-size:11px; padding:4px 10px;">● incomplete</span>
+      </div>
+
+      <!-- Error banner -->
+      <div style="background:rgba(248,113,113,0.07); border:1px solid rgba(248,113,113,0.2); border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:11px; color:var(--red);">
+        ✗ resample failed — ValueError: empty DataFrame after time filter [2026-04-11 → 2026-04-15]
+        <a href="run_detail.html" style="margin-left:10px; color:var(--accent);">view run →</a>
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:14px;">
+        <div style="display:grid; grid-template-columns:30px 1.4fr 70px 110px 80px; gap:12px; font-size:10px; color:var(--muted); padding-bottom:8px; border-bottom:1px solid var(--border); letter-spacing:0.08em; text-transform:uppercase;">
+          <span></span><span>Stage</span><span style="text-align:right;">Files</span><span style="text-align:right;">Last mod</span><span style="text-align:right;">Status</span>
+        </div>
+        <div class="step-row"><span class="step-idx">01</span><span style="color:var(--text);">parse</span><span style="text-align:right; color:var(--text);">23</span><span style="text-align:right; color:var(--muted);">2026-04-10</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row"><span class="step-idx">02</span><span style="color:var(--text);">clean</span><span style="text-align:right; color:var(--text);">23</span><span style="text-align:right; color:var(--muted);">2026-04-10</span><span style="text-align:right;"><span class="tag tag-ok">ok</span></span></div>
+        <div class="step-row" style="background:rgba(248,113,113,0.04); margin:0 -4px; padding:7px 4px; border-radius:4px;"><span class="step-idx" style="color:var(--red);">03</span><span style="color:var(--red);">resample</span><span style="text-align:right; color:var(--dim);">0</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right;"><span class="tag tag-err">error</span></span></div>
+        <div class="step-row" style="opacity:0.3;"><span class="step-idx">04</span><span style="color:var(--muted);">transform</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right;"><span class="tag tag-na">—</span></span></div>
+        <div class="step-row" style="opacity:0.3;"><span class="step-idx">05</span><span style="color:var(--muted);">normalize</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right;"><span class="tag tag-na">—</span></span></div>
+        <div class="step-row" style="opacity:0.3;"><span class="step-idx">06</span><span style="color:var(--muted);">aggregate</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right;"><span class="tag tag-na">—</span></span></div>
+        <div class="step-row" style="opacity:0.3;"><span class="step-idx">07</span><span style="color:var(--muted);">to_postgres</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right;"><span class="tag tag-na">—</span></span></div>
+        <div class="step-row" style="opacity:0.3;"><span class="step-idx">08</span><span style="color:var(--muted);">exportcsv</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right;"><span class="tag tag-na">—</span></span></div>
+        <div class="step-row" style="opacity:0.3;"><span class="step-idx">09</span><span style="color:var(--muted);">exportparquet</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right; color:var(--dim);">—</span><span style="text-align:right;"><span class="tag tag-na">—</span></span></div>
+      </div>
+      <div class="prog-track"><div class="prog-fill" style="width:22%; background:var(--red);"></div></div>
+      <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
+        <span style="color:var(--red);">2 / 9 complete · stopped at resample</span>
+        <a href="run_detail.html">debug →</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

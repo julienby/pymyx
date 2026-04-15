@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pypeweb — Run b7e2d4f0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e1117;
+      --surface: #161b27;
+      --surface2: #1c2333;
+      --border: #232d3f;
+      --accent: #38bdf8;
+      --green: #4ade80;
+      --red: #f87171;
+      --amber: #fbbf24;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --dim: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; min-height: 100vh; display: flex; }
+    .syne { font-family: 'Syne', sans-serif; }
+    a { text-decoration: none; color: var(--accent); transition: opacity 0.15s; }
+    a:hover { opacity: 0.8; }
+
+    /* Sidebar */
+    aside { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; }
+    .logo { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+    .logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: -0.3px; }
+    .logo-sub { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.1em; }
+    nav { padding: 16px 12px; flex: 1; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); cursor: pointer; margin-bottom: 2px; transition: all 0.15s; }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(56,189,248,0.1); color: var(--accent); }
+    .nav-icon { width: 16px; text-align: center; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; box-shadow: 0 0 6px rgba(74,222,128,0.6); }
+
+    /* Main */
+    main { margin-left: 220px; flex: 1; padding: 32px 36px; min-height: 100vh; max-width: calc(900px + 220px); }
+
+    /* Tags */
+    .tag { font-size: 10px; font-weight: 500; border-radius: 4px; padding: 2px 7px; font-family: 'IBM Plex Mono', monospace; }
+    .tag-ok { background: rgba(74,222,128,0.1); color: var(--green); }
+    .tag-err { background: rgba(248,113,113,0.12); color: var(--red); }
+
+    /* Summary card */
+    .summary-card { background: var(--surface); border: 1px solid rgba(248,113,113,0.25); border-radius: 12px; padding: 22px 24px; margin-bottom: 24px; }
+    .meta-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 18px; }
+    .meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+    .meta-val { font-size: 13px; color: var(--text); }
+
+    /* Step progress */
+    .prog-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; }
+    .steps-bar { display: flex; gap: 4px; height: 6px; margin-bottom: 8px; }
+    .step-seg { flex: 1; border-radius: 3px; }
+    .steps-labels { display: flex; gap: 4px; font-size: 9px; color: var(--muted); letter-spacing: 0.04em; }
+    .step-lbl { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Timeline */
+    .tl-wrap { position: relative; padding-left: 36px; }
+    .tl-line { position: absolute; left: 8px; top: 8px; bottom: 0; width: 1px; background: var(--border); }
+    .tl-item { position: relative; margin-bottom: 14px; }
+    .tl-dot { position: absolute; left: -32px; top: 10px; width: 10px; height: 10px; border-radius: 50%; }
+    .tl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+    .tl-card.is-err { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.025); }
+    .event-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; font-size: 11px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .tl-card.is-err .event-grid { border-top-color: rgba(248,113,113,0.1); }
+    .ev-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+    .ev-val { font-size: 12px; color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="logo">
+      <div class="logo-text">pypeweb</div>
+      <div class="logo-sub">pipeline monitor</div>
+    </div>
+    <nav>
+      <a href="status.html" style="color:inherit;">
+        <div class="nav-item">
+          <span class="nav-icon">◈</span>
+          <span>Status</span>
+        </div>
+      </a>
+      <a href="runs.html">
+        <div class="nav-item active">
+          <span class="nav-icon">▷</span>
+          <span>Runs</span>
+        </div>
+      </a>
+      <div class="nav-item" style="opacity:0.4; cursor:not-allowed;">
+        <span class="nav-icon">◷</span>
+        <span>Schedule</span>
+        <span style="font-size:9px; margin-left:auto; color:var(--dim);">soon</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div><span class="status-dot"></span>localhost:5000</div>
+      <div style="margin-top:6px; color:var(--dim);">v0.1.0-alpha</div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main>
+
+    <!-- Breadcrumb -->
+    <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); margin-bottom:24px; letter-spacing:0.05em;">
+      <a href="runs.html" style="color:var(--muted);">runs</a>
+      <span style="color:var(--dim);">/</span>
+      <span style="color:var(--accent);">b7e2d4f0</span>
+    </div>
+
+    <!-- Page header -->
+    <div style="margin-bottom:24px;">
+      <div class="syne" style="font-size:26px; font-weight:800; color:var(--text); margin-bottom:6px;">Run b7e2d4f0</div>
+      <div style="display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted);">
+        <span class="tag tag-err">● error</span>
+        <span>stab-dreissene · 2026-04-15 07:15</span>
+      </div>
+    </div>
+
+    <!-- Summary card -->
+    <div class="summary-card">
+      <div class="meta-grid">
+        <div>
+          <div class="meta-label">Flow</div>
+          <div class="meta-val">stab-dreissene</div>
+        </div>
+        <div>
+          <div class="meta-label">Dataset</div>
+          <div class="meta-val">STAB-2026</div>
+        </div>
+        <div>
+          <div class="meta-label">Duration</div>
+          <div class="meta-val">13s</div>
+        </div>
+        <div>
+          <div class="meta-label">Steps done</div>
+          <div class="meta-val" style="color:var(--red);">2 / 9</div>
+        </div>
+      </div>
+      <div style="background:rgba(248,113,113,0.06); border:1px solid rgba(248,113,113,0.2); border-radius:8px; padding:10px 14px; font-size:11px; color:var(--red);">
+        <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; opacity:0.7; display:block; margin-bottom:4px;">error</span>
+        ValueError: empty DataFrame after time filter<br>
+        [2026-04-11T00:00:00Z → 2026-04-15T00:00:00Z]<br>
+        at treatment: resample
+      </div>
+    </div>
+
+    <!-- Step progress -->
+    <div class="prog-card">
+      <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Step Progress</div>
+      <div class="steps-bar">
+        <div class="step-seg" style="background:var(--green);"></div>
+        <div class="step-seg" style="background:var(--green);"></div>
+        <div class="step-seg" style="background:var(--red);"></div>
+        <div class="step-seg" style="background:var(--border);"></div>
+        <div class="step-seg" style="background:var(--border);"></div>
+        <div class="step-seg" style="background:var(--border);"></div>
+        <div class="step-seg" style="background:var(--border);"></div>
+        <div class="step-seg" style="background:var(--border);"></div>
+        <div class="step-seg" style="background:var(--border);"></div>
+      </div>
+      <div class="steps-labels">
+        <div class="step-lbl">parse</div>
+        <div class="step-lbl">clean</div>
+        <div class="step-lbl" style="color:var(--red);">resample</div>
+        <div class="step-lbl">transform</div>
+        <div class="step-lbl">normalize</div>
+        <div class="step-lbl">aggregate</div>
+        <div class="step-lbl">postgres</div>
+        <div class="step-lbl">csv</div>
+        <div class="step-lbl">parquet</div>
+      </div>
+    </div>
+
+    <!-- Timeline section label -->
+    <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:16px;">Event Timeline</div>
+
+    <!-- Timeline -->
+    <div class="tl-wrap">
+      <div class="tl-line"></div>
+
+      <!-- Step 1: parse -->
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--green); box-shadow:0 0 6px rgba(74,222,128,0.5);"></div>
+        <div class="tl-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="tag tag-ok">ok</span>
+              <span style="font-size:14px; color:var(--text);">parse</span>
+            </div>
+            <span style="font-size:11px; color:var(--muted);">07:15:01 → 07:15:44</span>
+          </div>
+          <div class="event-grid">
+            <div><div class="ev-label">input</div><div class="ev-val">00_raw</div></div>
+            <div><div class="ev-label">output</div><div class="ev-val">10_parsed</div></div>
+            <div><div class="ev-label">duration</div><div class="ev-val" style="color:var(--green);">43s</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: clean -->
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--green); box-shadow:0 0 6px rgba(74,222,128,0.5);"></div>
+        <div class="tl-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="tag tag-ok">ok</span>
+              <span style="font-size:14px; color:var(--text);">clean</span>
+            </div>
+            <span style="font-size:11px; color:var(--muted);">07:15:44 → 07:16:11</span>
+          </div>
+          <div class="event-grid">
+            <div><div class="ev-label">input</div><div class="ev-val">10_parsed</div></div>
+            <div><div class="ev-label">output</div><div class="ev-val">20_clean</div></div>
+            <div><div class="ev-label">duration</div><div class="ev-val" style="color:var(--green);">27s</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: resample error -->
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--red); box-shadow:0 0 8px rgba(248,113,113,0.6);"></div>
+        <div class="tl-card is-err">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="tag tag-err">error</span>
+              <span style="font-size:14px; color:var(--red);">resample</span>
+            </div>
+            <span style="font-size:11px; color:var(--muted);">07:16:11 → 07:16:14</span>
+          </div>
+          <div class="event-grid">
+            <div><div class="ev-label">input</div><div class="ev-val">20_clean</div></div>
+            <div><div class="ev-label">output</div><div class="ev-val" style="color:var(--dim);">25_resampled</div></div>
+            <div><div class="ev-label">duration</div><div class="ev-val" style="color:var(--red);">3s</div></div>
+          </div>
+          <div style="margin-top:10px; background:rgba(248,113,113,0.06); border-left:2px solid rgba(248,113,113,0.4); padding:8px 12px; font-size:11px; color:var(--red); border-radius:0 4px 4px 0;">
+            ValueError: empty DataFrame after time filter [2026-04-11T00:00:00Z → 2026-04-15T00:00:00Z]
+          </div>
+        </div>
+      </div>
+
+      <!-- Steps 4-9: not reached -->
+      <div class="tl-item" style="opacity:0.35;">
+        <div class="tl-dot" style="background:var(--dim); border:1px solid var(--border);"></div>
+        <div class="tl-card" style="background:var(--surface2);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:10px; color:var(--dim); background:var(--border); border-radius:4px; padding:2px 8px; text-transform:uppercase; letter-spacing:0.08em;">not reached</span>
+            <span style="font-size:12px; color:var(--dim);">transform · normalize · aggregate · to_postgres · exportcsv · exportparquet</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

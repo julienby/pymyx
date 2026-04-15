@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pypeweb — Runs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #f5f5f7; color: #1d1d1f; font-family: 'DM Sans', -apple-system, sans-serif; min-height: 100vh; }
+    h1, .serif { font-family: 'DM Serif Display', serif; }
+    a { text-decoration: none; color: #0071e3; }
+    a:hover { text-decoration: underline; }
+    nav a { color: #1d1d1f; font-size: 14px; font-weight: 500; }
+    nav a.active { color: #0071e3; }
+    nav a:hover { color: #0071e3; text-decoration: none; }
+    .card { background: #fff; border-radius: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .run-row { display: grid; grid-template-columns: 110px 1.6fr 1.8fr 1fr 0.8fr 0.8fr 60px; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #f0f0f3; cursor: pointer; transition: background 0.15s; }
+    .run-row:hover { background: #f5f5f7; }
+    .run-row:last-child { border-bottom: none; }
+    .pill { border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+    .pill-ok { background: #d1f7e0; color: #1a7340; }
+    .pill-err { background: #ffe5e3; color: #c0392b; }
+    .steps-bar { display: flex; gap: 3px; }
+    .step-chip { flex: 1; height: 4px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <nav style="background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid rgba(0,0,0,0.06); padding: 0 40px;">
+    <div style="max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 52px;">
+      <span class="serif" style="font-size: 18px; letter-spacing: -0.3px;">Pypeweb</span>
+      <div style="display: flex; gap: 32px;">
+        <a href="status.html">Status</a>
+        <a href="runs.html" class="active">Runs</a>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6e6e73;">
+        <span class="dot" style="background:#30d158;"></span>
+        API connected
+      </div>
+    </div>
+  </nav>
+
+  <main style="max-width: 960px; margin: 0 auto; padding: 48px 40px;">
+
+    <div style="margin-bottom: 40px;">
+      <h1 class="serif" style="font-size: 40px; font-weight: 400; letter-spacing: -0.5px; margin-bottom: 8px;">Run History</h1>
+      <p style="color: #6e6e73; font-size: 16px;">Last 5 runs across all flows</p>
+    </div>
+
+    <!-- Stats -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 32px;">
+      <div class="card" style="padding: 18px 22px;">
+        <div style="font-size: 11px; color: #6e6e73; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;">Total</div>
+        <div style="font-size: 32px; font-weight: 300; letter-spacing: -1px;">5</div>
+      </div>
+      <div class="card" style="padding: 18px 22px;">
+        <div style="font-size: 11px; color: #6e6e73; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;">Success</div>
+        <div style="font-size: 32px; font-weight: 300; letter-spacing: -1px; color: #30d158;">4</div>
+      </div>
+      <div class="card" style="padding: 18px 22px;">
+        <div style="font-size: 11px; color: #6e6e73; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;">Errors</div>
+        <div style="font-size: 32px; font-weight: 300; letter-spacing: -1px; color: #ff3b30;">1</div>
+      </div>
+      <div class="card" style="padding: 18px 22px;">
+        <div style="font-size: 11px; color: #6e6e73; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;">Avg. time</div>
+        <div style="font-size: 32px; font-weight: 300; letter-spacing: -1px;">4m 51s</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card" style="overflow: hidden;">
+      <!-- Header -->
+      <div style="display: grid; grid-template-columns: 110px 1.6fr 1.8fr 1fr 0.8fr 0.8fr 60px; align-items: center; gap: 16px; padding: 12px 24px; border-bottom: 1px solid #f0f0f3;">
+        <span style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;">Run ID</span>
+        <span style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;">Flow</span>
+        <span style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;">Started</span>
+        <span style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;">Status</span>
+        <span style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;">Steps</span>
+        <span style="font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;">Duration</span>
+        <span></span>
+      </div>
+
+      <!-- Row 1 -->
+      <div class="run-row" onclick="location.href='run_detail.html'">
+        <span style="font-size: 13px; font-family: 'Courier New', monospace; color: #0071e3;">a3f9b2c1</span>
+        <span style="font-size: 14px;">valvometry-daily</span>
+        <span style="font-size: 13px; color: #6e6e73;">Today, 08:32</span>
+        <span><span class="pill pill-ok"><span class="dot" style="background:#30d158;"></span>Success</span></span>
+        <div>
+          <div style="font-size: 13px; color: #1d1d1f; margin-bottom: 4px;">9 / 9</div>
+          <div class="steps-bar" style="max-width:80px;">
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#0071e3;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+          </div>
+        </div>
+        <span style="font-size: 14px; color: #6e6e73;">4m 23s</span>
+        <a href="run_detail.html" style="font-size: 13px; color: #0071e3; text-align:right;">→</a>
+      </div>
+
+      <!-- Row 2 — error -->
+      <div class="run-row" style="background:#fff9f9;" onclick="location.href='run_detail.html'">
+        <span style="font-size: 13px; font-family: 'Courier New', monospace; color: #0071e3;">b7e2d4f0</span>
+        <span style="font-size: 14px;">stab-dreissene</span>
+        <span style="font-size: 13px; color: #6e6e73;">Today, 07:15</span>
+        <span><span class="pill pill-err"><span class="dot" style="background:#ff3b30;"></span>Error</span></span>
+        <div>
+          <div style="font-size: 13px; color: #c0392b; margin-bottom: 4px;">2 / 9</div>
+          <div class="steps-bar" style="max-width:80px;">
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#ff3b30;"></div>
+            <div class="step-chip" style="background:#e5e5ea;"></div>
+            <div class="step-chip" style="background:#e5e5ea;"></div>
+            <div class="step-chip" style="background:#e5e5ea;"></div>
+            <div class="step-chip" style="background:#e5e5ea;"></div>
+            <div class="step-chip" style="background:#e5e5ea;"></div>
+            <div class="step-chip" style="background:#e5e5ea;"></div>
+          </div>
+        </div>
+        <span style="font-size: 14px; color: #6e6e73;">13s</span>
+        <a href="run_detail.html" style="font-size: 13px; color: #0071e3; text-align:right;">→</a>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="run-row">
+        <span style="font-size: 13px; font-family: 'Courier New', monospace; color: #0071e3;">c9a1b3e2</span>
+        <span style="font-size: 14px;">valvometry-daily</span>
+        <span style="font-size: 13px; color: #6e6e73;">Yesterday, 08:31</span>
+        <span><span class="pill pill-ok"><span class="dot" style="background:#30d158;"></span>Success</span></span>
+        <div>
+          <div style="font-size: 13px; color: #1d1d1f; margin-bottom: 4px;">9 / 9</div>
+          <div class="steps-bar" style="max-width:80px;">
+            <div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#0071e3;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+          </div>
+        </div>
+        <span style="font-size: 14px; color: #6e6e73;">4m 11s</span>
+        <span style="font-size: 13px; color: #0071e3; text-align:right;">→</span>
+      </div>
+
+      <!-- Row 4 -->
+      <div class="run-row">
+        <span style="font-size: 13px; font-family: 'Courier New', monospace; color: #0071e3;">d4f0e1c3</span>
+        <span style="font-size: 14px;">valvometry-daily</span>
+        <span style="font-size: 13px; color: #6e6e73;">Apr 13, 08:30</span>
+        <span><span class="pill pill-ok"><span class="dot" style="background:#30d158;"></span>Success</span></span>
+        <div>
+          <div style="font-size: 13px; color: #1d1d1f; margin-bottom: 4px;">9 / 9</div>
+          <div class="steps-bar" style="max-width:80px;">
+            <div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#0071e3;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+          </div>
+        </div>
+        <span style="font-size: 14px; color: #6e6e73;">4m 45s</span>
+        <span style="font-size: 13px; color: #0071e3; text-align:right;">→</span>
+      </div>
+
+      <!-- Row 5 -->
+      <div class="run-row">
+        <span style="font-size: 13px; font-family: 'Courier New', monospace; color: #0071e3;">e5a2b3d4</span>
+        <span style="font-size: 14px;">stab-dreissene</span>
+        <span style="font-size: 13px; color: #6e6e73;">Apr 10, 14:22</span>
+        <span><span class="pill pill-ok"><span class="dot" style="background:#30d158;"></span>Success</span></span>
+        <div>
+          <div style="font-size: 13px; color: #1d1d1f; margin-bottom: 4px;">9 / 9</div>
+          <div class="steps-bar" style="max-width:80px;">
+            <div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+            <div class="step-chip" style="background:#0071e3;"></div><div class="step-chip" style="background:#30d158;"></div><div class="step-chip" style="background:#30d158;"></div>
+          </div>
+        </div>
+        <span style="font-size: 14px; color: #6e6e73;">6m 52s</span>
+        <span style="font-size: 13px; color: #0071e3; text-align:right;">→</span>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pypeweb — Runs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e1117;
+      --surface: #161b27;
+      --surface2: #1c2333;
+      --border: #232d3f;
+      --accent: #38bdf8;
+      --green: #4ade80;
+      --red: #f87171;
+      --amber: #fbbf24;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --dim: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; min-height: 100vh; display: flex; }
+    .syne { font-family: 'Syne', sans-serif; }
+    a { text-decoration: none; color: var(--accent); transition: opacity 0.15s; }
+    a:hover { opacity: 0.8; }
+
+    /* Sidebar */
+    aside { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; }
+    .logo { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+    .logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: -0.3px; }
+    .logo-sub { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.1em; }
+    nav { padding: 16px 12px; flex: 1; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); cursor: pointer; margin-bottom: 2px; transition: all 0.15s; }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(56,189,248,0.1); color: var(--accent); }
+    .nav-icon { width: 16px; text-align: center; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; box-shadow: 0 0 6px rgba(74,222,128,0.6); }
+
+    /* Main */
+    main { margin-left: 220px; flex: 1; padding: 32px 36px; min-height: 100vh; }
+    .page-header { margin-bottom: 28px; }
+    .page-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .page-sub { font-size: 12px; color: var(--muted); }
+
+    /* Stats bar */
+    .stats-bar { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .stat-val { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 3px; }
+    .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+    /* Tags */
+    .tag { font-size: 10px; font-weight: 500; border-radius: 4px; padding: 2px 7px; font-family: 'IBM Plex Mono', monospace; }
+    .tag-ok { background: rgba(74,222,128,0.1); color: var(--green); }
+    .tag-err { background: rgba(248,113,113,0.12); color: var(--red); }
+
+    /* Table */
+    .run-table { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .run-header { display: grid; grid-template-columns: 110px 1.4fr 1.6fr 90px 1fr 80px 36px; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+    .run-row { display: grid; grid-template-columns: 110px 1.4fr 1.6fr 90px 1fr 80px 36px; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; font-size: 13px; }
+    .run-row:last-child { border-bottom: none; }
+    .run-row:hover { background: var(--surface2); }
+    .run-row.has-err { background: rgba(248,113,113,0.025); }
+    .run-row.has-err:hover { background: rgba(248,113,113,0.05); }
+
+    /* Mini steps bar */
+    .steps-mini { display: flex; gap: 2px; height: 4px; }
+    .step-seg { flex: 1; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="logo">
+      <div class="logo-text">pypeweb</div>
+      <div class="logo-sub">pipeline monitor</div>
+    </div>
+    <nav>
+      <a href="status.html" style="color:inherit;">
+        <div class="nav-item">
+          <span class="nav-icon">◈</span>
+          <span>Status</span>
+        </div>
+      </a>
+      <a href="runs.html">
+        <div class="nav-item active">
+          <span class="nav-icon">▷</span>
+          <span>Runs</span>
+        </div>
+      </a>
+      <div class="nav-item" style="opacity:0.4; cursor:not-allowed;">
+        <span class="nav-icon">◷</span>
+        <span>Schedule</span>
+        <span style="font-size:9px; margin-left:auto; color:var(--dim);">soon</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div><span class="status-dot"></span>localhost:5000</div>
+      <div style="margin-top:6px; color:var(--dim);">v0.1.0-alpha</div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main>
+    <div class="page-header">
+      <div class="page-title syne">Run History</div>
+      <div class="page-sub">Last 5 runs across all flows · 2026-04-15</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--accent);">5</div>
+        <div class="stat-label">Total runs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--green);">4</div>
+        <div class="stat-label">Success</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--red);">1</div>
+        <div class="stat-label">Errors</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--text);">4m 51s</div>
+        <div class="stat-label">Avg. duration</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="run-table">
+      <div class="run-header">
+        <span>Run ID</span>
+        <span>Flow</span>
+        <span>Started</span>
+        <span>Status</span>
+        <span>Steps</span>
+        <span>Duration</span>
+        <span></span>
+      </div>
+
+      <!-- Row 1 -->
+      <div class="run-row" onclick="location.href='run_detail.html'">
+        <span style="color:var(--accent);">a3f9b2c1</span>
+        <span style="color:var(--text);">valvometry-daily</span>
+        <span style="color:var(--muted);">today 08:32</span>
+        <span><span class="tag tag-ok">● ok</span></span>
+        <div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">9 / 9</div>
+          <div class="steps-mini" style="max-width:72px;">
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--accent);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+          </div>
+        </div>
+        <span style="color:var(--muted);">4m 23s</span>
+        <a href="run_detail.html" style="font-size:12px; color:var(--accent);">→</a>
+      </div>
+
+      <!-- Row 2 — error -->
+      <div class="run-row has-err" onclick="location.href='run_detail.html'">
+        <span style="color:var(--accent);">b7e2d4f0</span>
+        <span style="color:var(--text);">stab-dreissene</span>
+        <span style="color:var(--muted);">today 07:15</span>
+        <span><span class="tag tag-err">● error</span></span>
+        <div>
+          <div style="font-size:11px; color:var(--red); margin-bottom:4px;">2 / 9</div>
+          <div class="steps-mini" style="max-width:72px;">
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--red);"></div>
+            <div class="step-seg" style="background:var(--border);"></div>
+            <div class="step-seg" style="background:var(--border);"></div>
+            <div class="step-seg" style="background:var(--border);"></div>
+            <div class="step-seg" style="background:var(--border);"></div>
+            <div class="step-seg" style="background:var(--border);"></div>
+            <div class="step-seg" style="background:var(--border);"></div>
+          </div>
+        </div>
+        <span style="color:var(--muted);">13s</span>
+        <a href="run_detail.html" style="font-size:12px; color:var(--accent);">→</a>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="run-row" onclick="location.href='run_detail.html'">
+        <span style="color:var(--accent);">c9a1b3e2</span>
+        <span style="color:var(--text);">valvometry-daily</span>
+        <span style="color:var(--muted);">yesterday 08:31</span>
+        <span><span class="tag tag-ok">● ok</span></span>
+        <div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">9 / 9</div>
+          <div class="steps-mini" style="max-width:72px;">
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--accent);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+          </div>
+        </div>
+        <span style="color:var(--muted);">4m 11s</span>
+        <a href="run_detail.html" style="font-size:12px; color:var(--accent);">→</a>
+      </div>
+
+      <!-- Row 4 -->
+      <div class="run-row" onclick="location.href='run_detail.html'">
+        <span style="color:var(--accent);">d4f0e1c3</span>
+        <span style="color:var(--text);">valvometry-daily</span>
+        <span style="color:var(--muted);">Apr 13 08:30</span>
+        <span><span class="tag tag-ok">● ok</span></span>
+        <div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">9 / 9</div>
+          <div class="steps-mini" style="max-width:72px;">
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--accent);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+          </div>
+        </div>
+        <span style="color:var(--muted);">4m 45s</span>
+        <a href="run_detail.html" style="font-size:12px; color:var(--accent);">→</a>
+      </div>
+
+      <!-- Row 5 -->
+      <div class="run-row" onclick="location.href='run_detail.html'">
+        <span style="color:var(--accent);">e5a2b3d4</span>
+        <span style="color:var(--text);">stab-dreissene</span>
+        <span style="color:var(--muted);">Apr 10 14:22</span>
+        <span><span class="tag tag-ok">● ok</span></span>
+        <div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">9 / 9</div>
+          <div class="steps-mini" style="max-width:72px;">
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--accent);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+            <div class="step-seg" style="background:var(--green);"></div>
+          </div>
+        </div>
+        <span style="color:var(--muted);">6m 52s</span>
+        <a href="run_detail.html" style="font-size:12px; color:var(--accent);">→</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

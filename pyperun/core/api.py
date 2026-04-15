@@ -152,6 +152,75 @@ def describe_treatment(name: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Run a flow
+# ---------------------------------------------------------------------------
+
+def run_flow(
+    name: str,
+    *,
+    time_from: str | None = None,
+    time_to: str | None = None,
+    last: bool = False,
+    from_step: str | None = None,
+    to_step: str | None = None,
+    step: str | None = None,
+    output_mode: str = "append",
+    params_override: dict | None = None,
+) -> str:
+    """Launch a flow synchronously and return the run_id.
+
+    Blocks until the flow completes or raises on error.
+
+    Parameters
+    ----------
+    name            : Flow name (e.g. "valvometry-daily")
+    time_from       : ISO 8601 start of time window (e.g. "2026-01-01T00:00:00Z")
+    time_to         : ISO 8601 end of time window
+    last            : If True, process only new data since last output (incremental)
+    from_step       : Start execution from this step (inclusive)
+    to_step         : Stop execution at this step (inclusive)
+    step            : Run a single step only
+    output_mode     : "append" | "replace" | "full-replace" (default: "append")
+    params_override : Dict of param overrides applied to every step
+
+    Returns
+    -------
+    run_id : str — unique identifier for this run (use get_run_events to inspect)
+
+    Raises
+    ------
+    FileNotFoundError : if the flow does not exist
+    SystemExit        : if a step fails (mirrors CLI behaviour)
+    ValueError        : on invalid step names or mutually exclusive options
+    """
+    from pyperun.core.flow import run_flow as _run_flow
+    from pyperun.core.timefilter import parse_iso_utc
+
+    if last and (time_from or time_to):
+        raise ValueError("last=True is mutually exclusive with time_from/time_to")
+    if step and (from_step or to_step):
+        raise ValueError("step is mutually exclusive with from_step/to_step")
+
+    tf = parse_iso_utc(time_from) if time_from else None
+    tt = parse_iso_utc(time_to) if time_to else None
+
+    if tf and tt and tf > tt:
+        raise ValueError("time_from must be before time_to")
+
+    return _run_flow(
+        name,
+        time_from=tf,
+        time_to=tt,
+        last=last,
+        from_step=from_step,
+        to_step=to_step,
+        step=step,
+        output_mode=output_mode,
+        params_override=params_override,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Status
 # ---------------------------------------------------------------------------
 

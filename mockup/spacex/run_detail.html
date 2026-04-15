@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PYPEWEB // TELEMETRY</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Space Mono', monospace; box-sizing: border-box; }
+    body { background: #050505; color: #c8c8c8; min-height: 100vh; }
+    .display { font-family: 'Orbitron', sans-serif; }
+    .blink { animation: blink 1.4s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .scanline { background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,229,255,0.012) 3px, rgba(0,229,255,0.012) 4px); pointer-events: none; position: fixed; inset: 0; z-index: 100; }
+    .glow-c { color: #00e5ff; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
+    .glow-g { color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+    .glow-r { color: #ff3b30; text-shadow: 0 0 10px rgba(255,59,48,0.5); }
+    a { text-decoration: none; transition: color 0.2s; }
+    a:hover { color: #00e5ff; }
+    .timeline-line { position: absolute; left: 19px; top: 0; bottom: 0; width: 1px; background: #1a1a1a; }
+    .timeline-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; position: relative; z-index: 1; }
+  </style>
+</head>
+<body>
+  <div class="scanline"></div>
+
+  <header style="border-bottom:1px solid #1a1a1a; padding:12px 24px; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <span class="display glow-c" style="font-size:14px; letter-spacing:0.2em; font-weight:900;">PYPEWEB</span>
+      <span style="color:#333; font-size:11px; letter-spacing:0.3em;">// MISSION CONTROL</span>
+    </div>
+    <nav style="display:flex; gap:32px; font-size:11px; letter-spacing:0.25em;">
+      <a href="status.html" style="color:#444;">STATUS</a>
+      <a href="runs.html" style="color:#444;">RUNS</a>
+      <a href="run_detail.html" class="glow-c">TELEMETRY</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:12px; font-size:11px; color:#444;">
+      <span class="blink" style="color:#00ff88;">●</span>
+      <span>SYS NOMINAL</span>
+      <span style="color:#2a2a2a;">|</span>
+      <span>2026-04-15 // 09:41:07Z</span>
+    </div>
+  </header>
+
+  <main style="padding:24px; max-width:900px;">
+
+    <!-- Breadcrumb -->
+    <div style="display:flex; align-items:center; gap:8px; font-size:10px; color:#444; letter-spacing:0.3em; margin-bottom:24px;">
+      <a href="runs.html" style="color:#444;">RUNS</a>
+      <span>→</span>
+      <span class="glow-c">b7e2d4f0</span>
+    </div>
+
+    <!-- Run header -->
+    <div style="border:1px solid rgba(255,59,48,0.3); padding:20px; background:rgba(255,59,48,0.018); margin-bottom:24px;">
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+        <div>
+          <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">RUN ID</div>
+          <div class="glow-c display" style="font-size:13px; letter-spacing:0.1em;">b7e2d4f0</div>
+        </div>
+        <div>
+          <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">FLOW</div>
+          <div style="font-size:12px; color:#c8c8c8;">stab-dreissene</div>
+        </div>
+        <div>
+          <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">INITIATED</div>
+          <div style="font-size:12px; color:#888;">2026-04-15 07:15:01Z</div>
+        </div>
+        <div>
+          <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">OUTCOME</div>
+          <div class="glow-r display" style="font-size:12px; font-weight:700; letter-spacing:0.15em;">● ANOMALY</div>
+        </div>
+      </div>
+      <div style="margin-top:16px; padding-top:12px; border-top:1px solid #1a1a1a;">
+        <div style="font-size:10px; color:#444; letter-spacing:0.4em; margin-bottom:6px;">ABORT SIGNAL</div>
+        <div style="font-size:11px; color:#ff6b64; background:rgba(255,59,48,0.08); padding:8px 12px; border-left:2px solid #ff3b30; letter-spacing:0.05em;">
+          ValueError: empty DataFrame after time filter [2026-04-11T00:00:00Z → 2026-04-15T00:00:00Z] at treatment resample
+        </div>
+      </div>
+    </div>
+
+    <!-- Section label -->
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+      <span class="display" style="font-size:10px; letter-spacing:0.5em; color:#444;">TELEMETRY STREAM</span>
+      <div style="flex:1; height:1px; background:#1a1a1a;"></div>
+      <span style="font-size:10px; color:#444;">3 EVENTS // ABORT AT T+13s</span>
+    </div>
+
+    <!-- Timeline -->
+    <div style="position:relative; padding-left:44px;">
+      <div class="timeline-line"></div>
+
+      <!-- Event 1: parse success -->
+      <div style="position:relative; margin-bottom:20px;">
+        <div class="timeline-dot" style="position:absolute; left:-33px; top:3px; background:#00ff88; box-shadow:0 0 8px rgba(0,255,136,0.5);"></div>
+        <div style="border:1px solid #1a1a1a; padding:14px; background:#0d0d0d;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span class="glow-g display" style="font-size:10px; letter-spacing:0.2em; font-weight:700;">SUCCESS</span>
+              <span style="font-size:12px; color:#c8c8c8;">PARSE</span>
+            </div>
+            <div style="text-align:right; font-size:10px;">
+              <div style="color:#555; letter-spacing:0.2em;">T+00:43 // 07:15:44Z</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; font-size:10px; margin-top:8px; padding-top:8px; border-top:1px solid #111;">
+            <div><span style="color:#444; letter-spacing:0.3em;">IN</span> <span style="color:#777;">00_raw</span></div>
+            <div><span style="color:#444; letter-spacing:0.3em;">OUT</span> <span style="color:#777;">10_parsed</span></div>
+            <div><span style="color:#444; letter-spacing:0.3em;">DUR</span> <span class="glow-g">43s</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event 2: clean success -->
+      <div style="position:relative; margin-bottom:20px;">
+        <div class="timeline-dot" style="position:absolute; left:-33px; top:3px; background:#00ff88; box-shadow:0 0 8px rgba(0,255,136,0.5);"></div>
+        <div style="border:1px solid #1a1a1a; padding:14px; background:#0d0d0d;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span class="glow-g display" style="font-size:10px; letter-spacing:0.2em; font-weight:700;">SUCCESS</span>
+              <span style="font-size:12px; color:#c8c8c8;">CLEAN</span>
+            </div>
+            <div style="text-align:right; font-size:10px;">
+              <div style="color:#555; letter-spacing:0.2em;">T+01:10 // 07:16:11Z</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; font-size:10px; margin-top:8px; padding-top:8px; border-top:1px solid #111;">
+            <div><span style="color:#444; letter-spacing:0.3em;">IN</span> <span style="color:#777;">10_parsed</span></div>
+            <div><span style="color:#444; letter-spacing:0.3em;">OUT</span> <span style="color:#777;">20_clean</span></div>
+            <div><span style="color:#444; letter-spacing:0.3em;">DUR</span> <span class="glow-g">27s</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event 3: resample FAIL -->
+      <div style="position:relative; margin-bottom:20px;">
+        <div class="timeline-dot" style="position:absolute; left:-33px; top:3px; background:#ff3b30; box-shadow:0 0 10px rgba(255,59,48,0.7);"></div>
+        <div style="border:1px solid rgba(255,59,48,0.3); padding:14px; background:rgba(255,59,48,0.025);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span class="glow-r display" style="font-size:10px; letter-spacing:0.2em; font-weight:700;">ABORT</span>
+              <span style="font-size:12px; color:#ff6b64;">RESAMPLE</span>
+            </div>
+            <div style="text-align:right; font-size:10px;">
+              <div style="color:#555; letter-spacing:0.2em;">T+01:13 // 07:16:14Z</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; font-size:10px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,59,48,0.1);">
+            <div><span style="color:#444; letter-spacing:0.3em;">IN</span> <span style="color:#777;">20_clean</span></div>
+            <div><span style="color:#444; letter-spacing:0.3em;">OUT</span> <span style="color:#555;">25_resampled</span></div>
+            <div><span style="color:#444; letter-spacing:0.3em;">DUR</span> <span class="glow-r">3s</span></div>
+          </div>
+          <div style="margin-top:10px; font-size:10px; color:#ff6b64; background:rgba(255,59,48,0.06); padding:8px 10px; border-left:2px solid rgba(255,59,48,0.5); letter-spacing:0.03em;">
+            ValueError: empty DataFrame after time filter [2026-04-11T00:00:00Z → 2026-04-15T00:00:00Z]
+          </div>
+        </div>
+      </div>
+
+      <!-- Steps 4-9 greyed out -->
+      <div style="position:relative; margin-bottom:8px;">
+        <div class="timeline-dot" style="position:absolute; left:-33px; top:6px; background:#1a1a1a; border:1px solid #2a2a2a;"></div>
+        <div style="border:1px solid #111; padding:10px 14px; background:#080808; opacity:0.4;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:10px; color:#333; letter-spacing:0.2em;">PENDING</span>
+            <span style="font-size:11px; color:#333;">TRANSFORM // NORMALIZE // AGGREGATE // TO_POSTGRES // EXPORTCSV // EXPORTPARQUET</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px; padding-top:16px; border-top:1px solid #111; display:flex; justify-content:space-between; font-size:10px; color:#333; letter-spacing:0.2em;">
+      <span>PYPERUN API // localhost:5000 // <span class="blink" style="color:#00ff88;">●</span> CONNECTED</span>
+      <span>PYPEWEB v0.1.0-alpha // 2026</span>
+    </div>
+  </main>
+</body>
+</html>
