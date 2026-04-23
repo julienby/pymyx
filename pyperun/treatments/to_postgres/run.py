@@ -2,20 +2,16 @@ from __future__ import annotations
 
 import fnmatch
 import io
-import json
 import re
 from collections import defaultdict
-from datetime import timedelta
 from itertools import product
 from pathlib import Path
 
 import pandas as pd
 import psycopg2
-import pyarrow.parquet as pq
 
 from pyperun.core.filename import list_parquet_files, parse_parquet_path
 
-# pandas dtype string → PostgreSQL type
 _PG_TYPE_MAP = {
     "datetime64[ns, UTC]": "TIMESTAMPTZ",
     "Int64": "BIGINT",
@@ -55,7 +51,7 @@ def _render_table_name(template: str, parts: dict) -> str:
     return _sanitize(rendered).upper()
 
 
-def _resolve_allowed_columns(source: dict) -> list[str] | None:
+def _resolve_allowed_columns(source: dict) -> list[str] | set | None:
     if "columns" in source:
         return source["columns"]
     sensors = source.get("sensors")
@@ -76,9 +72,11 @@ def _matches_structured_filter(col: str, allowed) -> bool:
         return False
     sensor, transform, metric = parts
     for pattern in allowed:
-        if ((pattern[0] is None or fnmatch.fnmatch(sensor, pattern[0]))
-                and (pattern[1] is None or fnmatch.fnmatch(transform, pattern[1]))
-                and (pattern[2] is None or fnmatch.fnmatch(metric, pattern[2]))):
+        if (
+            (pattern[0] is None or fnmatch.fnmatch(sensor, pattern[0]))
+            and (pattern[1] is None or fnmatch.fnmatch(transform, pattern[1]))
+            and (pattern[2] is None or fnmatch.fnmatch(metric, pattern[2]))
+        ):
             return True
     return False
 
@@ -171,7 +169,6 @@ def _ensure_columns(conn, table_name: str, df: pd.DataFrame) -> list[str]:
 
 
 def _copy_to_postgres(conn, table_name: str, df: pd.DataFrame) -> int:
-    """Bulk insert via COPY FROM stdin. Returns number of rows inserted."""
     if df.empty:
         return 0
     buf = io.StringIO()
@@ -187,97 +184,12 @@ def _copy_to_postgres(conn, table_name: str, df: pd.DataFrame) -> int:
     return len(df)
 
 
-# ---------------------------------------------------------------------------
-# Stats helpers
-# ---------------------------------------------------------------------------
-
-def _load_stats(path: Path) -> dict:
-    """Load stats.json from output dir. Returns empty dict if not found."""
-    if path.exists():
-        with open(path) as f:
-            return json.load(f)
-    return {}
-
-
-def _save_stats(path: Path, stats: dict) -> None:
-    with open(path, "w") as f:
-        json.dump(stats, f, indent=2, sort_keys=True)
-
-
-def _count_table(conn, table_name: str) -> int:
-    """Return COUNT(*) for table, or 0 if table does not exist."""
-    try:
-        with conn.cursor() as cur:
-            cur.execute(f'SELECT COUNT(*) FROM "{table_name}"')
-            return cur.fetchone()[0]
-    except psycopg2.errors.UndefinedTable:
-        conn.rollback()
-        return 0
-
-
-def _count_range(conn, table_name: str, ts_min, ts_max) -> int:
-    """Count rows in [ts_min, ts_max]. Returns 0 if table does not exist."""
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                f'SELECT COUNT(*) FROM "{table_name}" WHERE ts >= %s AND ts <= %s',
-                (ts_min, ts_max),
-            )
-            return cur.fetchone()[0]
-    except psycopg2.errors.UndefinedTable:
-        conn.rollback()
-        return 0
-
-
-def _delete_day(conn, table_name: str, ts_min, ts_max) -> None:
-    """Delete all rows in [ts_min, ts_max] from the table."""
-    with conn.cursor() as cur:
-        cur.execute(
-            f'DELETE FROM "{table_name}" WHERE ts >= %s AND ts <= %s',
-            (ts_min, ts_max),
-        )
-    conn.commit()
-
-
-def _sources_changed(day_files: list[Path], day_stats: dict) -> bool:
-    """Return True if any source parquet changed, appeared, or disappeared.
-
-    Comparison uses row count from parquet footer metadata (fast, no data read).
-    day_stats keys: device_id → row_count, plus "db_rows", "ts_min", "ts_max" (ignored here).
-    """
-    current = {
-        parse_parquet_path(f).device_id: pq.read_metadata(f).num_rows
-        for f in day_files
-    }
-    # New or changed file
-    for device_id, n_rows in current.items():
-        if day_stats.get(device_id) != n_rows:
-            return True
-    # Disappeared file
-    _meta_keys = {"db_rows", "ts_min", "ts_max"}
-    for key in day_stats:
-        if key not in _meta_keys and key not in current:
-            return True
-    return False
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def run(input_dir: str, output_dir: str, params: dict) -> None:
     in_path = Path(input_dir)
-    out_path = Path(output_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
-
     sources = params["sources"]
-    mode = params["mode"]
     table_prefix = params.get("table_prefix", "")
     table_template = params["table_template"]
     aggregations = params.get("aggregations", [])
-
-    stats_path = out_path / "stats.json"
-    stats = _load_stats(stats_path)
 
     parquet_files = list_parquet_files(in_path)
     if not parquet_files:
@@ -285,7 +197,7 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
     print(f"  [to_postgres] Found {len(parquet_files)} parquet files")
 
-    # Group files by (experience, step, aggregation) → day → [files]
+    # Group files by table (experience, step, aggregation) → day → [files]
     groups: dict[tuple, dict[str, list[Path]]] = defaultdict(lambda: defaultdict(list))
     for pf in parquet_files:
         parts = parse_parquet_path(pf)
@@ -302,7 +214,6 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
 
     total_rows = 0
     total_days = 0
-    truncated_tables: set[str] = set()
 
     try:
         for (experience, step, aggregation), days in sorted(groups.items()):
@@ -313,67 +224,11 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                 table_prefix + table_template,
                 {"experience": experience, "step": step, "aggregation": aggregation},
             )
-            table_stats: dict[str, dict] = stats.get(table_name, {})
 
             print(f"  [to_postgres] Table: {table_name} ({len(days)} days)")
 
-            # --- replace / reset: truncate once, replay all days, clear stats ---
-            if mode in ("replace", "reset"):
-                if table_name not in truncated_tables:
-                    try:
-                        with conn.cursor() as cur:
-                            if mode == "reset":
-                                cur.execute(f'DROP TABLE IF EXISTS "{table_name}"')
-                            else:
-                                cur.execute(f'TRUNCATE TABLE "{table_name}"')
-                        conn.commit()
-                    except psycopg2.errors.UndefinedTable:
-                        conn.rollback()
-                    truncated_tables.add(table_name)
-                table_stats = {}
-                days_to_replay = set(days.keys())
-
-            # --- append: Phase 1 (global sanity) + Phase 2 (per-file check) ---
-            else:
-                days_to_replay: set[str] = set()
-
-                # Phase 1 — one COUNT(*) to detect external DB corruption
-                expected_total = sum(v.get("db_rows", 0) for v in table_stats.values())
-                db_total = _count_table(conn, table_name)
-
-                if db_total != expected_total:
-                    print(
-                        f"  [to_postgres]   DB count mismatch "
-                        f"({db_total} in DB vs {expected_total} expected) — checking by day"
-                    )
-                    for day in days:
-                        day_stats = table_stats.get(day, {})
-                        ts_min_s = day_stats.get("ts_min")
-                        ts_max_s = day_stats.get("ts_max")
-                        if ts_min_s is None or ts_max_s is None:
-                            # No stored bounds → first time, replay to populate them
-                            days_to_replay.add(day)
-                            continue
-                        expected_rows = day_stats.get("db_rows", 0)
-                        if _count_range(conn, table_name, ts_min_s, ts_max_s) != expected_rows:
-                            days_to_replay.add(day)
-
-                # Phase 2 — parquet footer read per file (no data read, ~0.1 ms/file)
-                for day, day_files in days.items():
-                    if day not in days_to_replay:
-                        day_stats = table_stats.get(day, {})
-                        if _sources_changed(day_files, day_stats):
-                            days_to_replay.add(day)
-
-                if not days_to_replay:
-                    print(f"  [to_postgres]   all days up-to-date, skipping")
-                    continue
-
-                print(f"  [to_postgres]   {len(days_to_replay)} day(s) to replay")
-
-            # --- Phase 3: replay ---
-            for day in sorted(days_to_replay):
-                day_files = days.get(day, [])
+            for day in sorted(days):
+                day_files = days[day]
                 df = _pivot_wide(day_files, sources)
                 if df.empty:
                     continue
@@ -386,30 +241,19 @@ def run(input_dir: str, output_dir: str, params: dict) -> None:
                 ts_min = df["ts"].min()
                 ts_max = df["ts"].max()
 
-                if mode == "append":
-                    _delete_day(conn, table_name, ts_min, ts_max)
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f'DELETE FROM "{table_name}" WHERE ts >= %s AND ts <= %s',
+                        (ts_min, ts_max),
+                    )
+                conn.commit()
 
                 rows = _copy_to_postgres(conn, table_name, df)
                 total_rows += rows
                 total_days += 1
 
-                # Update stats for this day (ts_min/ts_max used for future integrity checks)
-                day_entry: dict = {
-                    "db_rows": rows,
-                    "ts_min": ts_min.isoformat(),
-                    "ts_max": ts_max.isoformat(),
-                }
-                for f in day_files:
-                    device_id = parse_parquet_path(f).device_id
-                    day_entry[device_id] = pq.read_metadata(f).num_rows
-                table_stats[day] = day_entry
-
-            stats[table_name] = table_stats
-
-        _save_stats(stats_path, stats)
         print(
-            f"  [to_postgres] Done: {total_rows} rows inserted across "
-            f"{total_days} day(s)"
+            f"  [to_postgres] Done: {total_rows} rows inserted across {total_days} day(s)"
         )
 
     finally:

@@ -39,11 +39,6 @@
             "default": "{experience}__{step}__{aggregation}",
             "description": "Table name template. Variables: {experience} (dataset name), {step} (domain), {aggregation} (window)"
         },
-        "mode": {
-            "type": "str",
-            "default": "append",
-            "description": "Write mode: append (insert new rows only), replace (truncate data, keep schema), reset (drop and recreate table from scratch)"
-        },
         "aggregations": {
             "type": "list",
             "default": [],
